@@ -1,0 +1,23 @@
+{
+    "appKeys": {
+        "KEY_DATA": 5,
+        "KEY_VALUE": 6
+    },
+    "capabilities": [
+        ""
+    ],
+    "companyName": "Pebble Technology",
+    "longName": "Care Portal in C",
+    "projectType": "native",
+    "resources": {
+        "media": []
+    },
+    "sdkVersion": "2",
+    "shortName": "Care Portal",
+    "uuid": "69a53987-379e-4ae7-a3c2-d08e5ffe8511",
+    "versionCode": 1,
+    "versionLabel": "2.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
