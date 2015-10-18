@@ -3,16 +3,23 @@
 #include "string.h"
 //https://github.com/pebble-examples/feature-simple-menu-layer
 #define NUM_MENU_SECTIONS 2
-#define NUM_FIRST_MENU_ITEMS 2
+#define NUM_FIRST_MENU_ITEMS 3
 #define NUM_SECOND_MENU_ITEMS 1
 
 #define KEY_DATA 5
 #define KEY_VALUE 6
+#define KEY_EVENT_TYPE 7
+#define KEY_EVENTTYPE 8
+
+#define UP 1
+#define DOWN -1
+#define INITIAL 0
 
 static Window *s_main_window = NULL;
 static Window *carbs_window = NULL;
 static Window *insulin_window = NULL;
 static Window *populate_window = NULL;
+static Window *pumpsitechange_window = NULL;
 
 static SimpleMenuLayer *s_simple_menu_layer;
 static SimpleMenuSection s_menu_sections[NUM_MENU_SECTIONS];
@@ -20,12 +27,20 @@ static SimpleMenuItem s_first_menu_items[NUM_FIRST_MENU_ITEMS];
 TextLayer *graph_text_layer_carbs = NULL;
 TextLayer *graph_text_layer_insulin = NULL;
 TextLayer *graph_text_layer_populate = NULL;
+TextLayer *graph_text_layer_pumpsitechange = NULL;
+
 
 char outputtext[100];
 char fractionaText[10];
 
 char keyname[20];
 char resultvalue[40];
+char eventtype[40];
+
+char pumpsitechange[50];
+int pumpsiteindex = 0;
+static char *pumpsitelocations[4] = { "RHS tummy", "LHS Tummy", "RHS bum", "LHS bum" };
+
 
 int integerpart = 0;
 int fractionalpart=0;
@@ -62,11 +77,11 @@ char* GetFractionaPartAsChar()
 {
   if(fractionalpart<=5)
   {
-      snprintf(fractionaText, 10, "0%d", fractionalpart);
+      snprintf(fractionaText, sizeof(fractionaText), "0%d", fractionalpart);
   }
   else
   {
-      snprintf(fractionaText, 10, "%d", fractionalpart);
+      snprintf(fractionaText, sizeof(fractionaText), "%d", fractionalpart);
   }
   
   return fractionaText; 
@@ -90,6 +105,23 @@ void Set_Part(bool currentPartSet, int increment)
       }
     }
 }
+ char* GetPumpSiteChangeLocation(int change)
+{
+   pumpsiteindex += change;
+  
+   int count = sizeof(pumpsitelocations)/sizeof(*pumpsitelocations);
+   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###GetPumpSiteChangeLocation: count: %d ###", count);
+   if(pumpsiteindex >= count)
+   {
+     pumpsiteindex = 0;
+   }
+   else if(pumpsiteindex < 0)
+   {
+     pumpsiteindex = 0;      
+   } 
+   snprintf(pumpsitechange, sizeof(pumpsitechange), "%s", pumpsitelocations[pumpsiteindex]);
+   return pumpsitechange;
+}
 
 void ResetToDefaults()
 {
@@ -110,8 +142,20 @@ void select_click_handler_populate(ClickRecognizerRef recognizer, void *context)
   
       char * const_result;
       const_result = resultvalue;
+      
+      char *const_eventtype;
+      const_eventtype = eventtype;
+     
+     
+      app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: const_key: %s ###", const_key);
+      app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: const_result: %s ###", const_result);
+      app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: const_eventtype: %s ###", const_eventtype);
+   
+     
       dict_write_cstring(iter, KEY_DATA, const_key);
       dict_write_cstring(iter, KEY_VALUE, const_result);
+      dict_write_cstring(iter, KEY_EVENTTYPE, const_eventtype);
+      
  
       app_message_outbox_send();
     
@@ -184,7 +228,7 @@ void Set_GraphText_layer_Insulin(TextLayer* currentlayer, bool currentPartSet, i
   int temp_integerpart = integerpart;
   static char s_packet_id_text[30];
   
-  snprintf(s_packet_id_text, 30, "Insulin: %d.%s units", temp_integerpart, GetFractionaPartAsChar());
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units", temp_integerpart, GetFractionaPartAsChar());
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
 
@@ -197,8 +241,9 @@ static void select_click_handler_insulin(ClickRecognizerRef recognizer, void *co
     {
       snprintf(outputtext, 100, "You are adding 'Insulin: %d.%s units'  to Care Portal.", integerpart, GetFractionaPartAsChar());
 
-      snprintf(keyname, 20, "insulin");
-      snprintf(resultvalue, 40, "%d.%s", integerpart, GetFractionaPartAsChar());
+      snprintf(keyname, sizeof(keyname), "insulin");
+      snprintf(resultvalue, sizeof(resultvalue), "%d.%s", integerpart, GetFractionaPartAsChar());
+      snprintf(eventtype,sizeof(eventtype), "Note");
       create_populate_window();
       bIntegerPart_set = false;
     }
@@ -245,7 +290,7 @@ void Set_GraphText_layer_carbs(TextLayer* currentlayer, int increment)
 {
   Set_IntegerPart(increment);
   static char s_packet_id_text[20];
-  snprintf(s_packet_id_text, 20, "Carbs: %d g", integerpart);
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Carbs: %d g", integerpart);
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
 
@@ -258,7 +303,8 @@ static void select_click_handler_carbs(ClickRecognizerRef recognizer, void *cont
   snprintf(outputtext, 100, "You are adding 'Carbs: %d g'  to Care Portal.", integerpart);
   snprintf(keyname, 20, "carbs");
   snprintf(resultvalue, 40, "%d", integerpart);
-  
+  snprintf(eventtype,sizeof(eventtype), "Note");
+
   create_populate_window();
 }
 
@@ -339,6 +385,83 @@ void insulin_unload_graph(Window *window) {
    window_destroy(insulin_window);
 }
 
+//////// PUMP SITE CHANGE ////////////////////////////////////////////////////////////////
+void Set_GraphText_layer_pumpsitechange(TextLayer* currentlayer, int change)
+{
+  static char s_packet_id_text[50];
+
+  char * sitechange = GetPumpSiteChangeLocation(change);
+  
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Pump Site Location: %s", sitechange);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "Pump Site Location: %s", sitechange);
+  text_layer_set_text(currentlayer, s_packet_id_text);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_pumpsitechange: Exiting###");
+}
+
+static void up_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
+  Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, UP);
+	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_pumpsitechange: Exiting###");
+}
+
+static void select_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void *context) {
+  
+    char * sitechange = GetPumpSiteChangeLocation(INITIAL);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_pumpsitechange - Pump Site Location: %s", sitechange);
+    snprintf(outputtext, 100, "You are adding 'Pump Site Location: %s'  to Care Portal.", sitechange);
+    snprintf(keyname, sizeof(keyname), "notes");
+    snprintf(resultvalue, sizeof(resultvalue), "%s", sitechange);
+    snprintf(eventtype,sizeof(eventtype), "Site Change");
+  
+    create_populate_window();
+}
+
+static void down_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void *context) {
+  Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, DOWN);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_pumpsitechange: Exiting###");
+}
+
+
+static void click_config_provider_pumpsitechange(void *context) {
+  // Register the ClickHandlers
+  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_pumpsitechange);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_pumpsitechange);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_pumpsitechange);
+}
+
+void pumpsitechange_load_graph(Window *window) {
+  
+  ResetToDefaults();
+  Layer *window_layer_graph = NULL;
+  
+  window_layer_graph = window_get_root_layer(pumpsitechange_window);
+
+  graph_text_layer_pumpsitechange = text_layer_create(GRect(0, 0, 144, 170));
+ 
+  Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, INITIAL);
+   
+  //snprintf(pumpsitechange, 50, "Pump Site Location: %s", GetPumpSiteChangeLocation());
+
+ // Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange);
+  //text_layer_set_text(graph_text_layer_pumpsitechange,  "Pump Site Location: RHS tummy");
+  text_layer_set_text_color(graph_text_layer_pumpsitechange, GColorBlack);
+  text_layer_set_background_color(graph_text_layer_pumpsitechange, GColorWhite);
+  text_layer_set_font(graph_text_layer_pumpsitechange, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(graph_text_layer_pumpsitechange, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_pumpsitechange));
+  
+  window_set_click_config_provider(pumpsitechange_window,(ClickConfigProvider)click_config_provider_pumpsitechange);
+}
+
+void pumpsitechange_unload_graph(Window *window) {
+   if(graph_text_layer_pumpsitechange)
+   {
+     text_layer_destroy(graph_text_layer_pumpsitechange);
+   }
+   window_destroy(pumpsitechange_window);
+}
+/////////////////////// END OF PUMP SITE CHANGE ///////////////////////////////
+
+///////////////////////////// MAIN WINDOW /////////////////////////////////
 static void menu_select_callback(int index, void *ctx) {
   
   if(index == 0)
@@ -365,6 +488,19 @@ static void menu_select_callback(int index, void *ctx) {
     							  
     	  window_stack_push(insulin_window, true);
   }
+   else if(index == 2)
+  {
+        pumpsitechange_window = window_create();
+    	  window_set_window_handlers(pumpsitechange_window, 
+    							   (WindowHandlers){
+    									                .load   = pumpsitechange_load_graph,
+    								                  .unload = pumpsitechange_unload_graph,
+                                     }
+    							   );  
+    							  
+    	  window_stack_push(pumpsitechange_window, true);
+  }
+  
 }
 
 static void main_window_load(Window *window) {
@@ -378,7 +514,12 @@ static void main_window_load(Window *window) {
     .title = "Insulin",
     .callback = menu_select_callback,
   };
-
+   s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+    .title = "Pump Site Change",
+    .callback = menu_select_callback,
+  };
+  
+  
   s_menu_sections[0] = (SimpleMenuSection) {
     .num_items = NUM_FIRST_MENU_ITEMS,
     .items = s_first_menu_items,
@@ -396,7 +537,7 @@ void main_window_unload(Window *window) {
   simple_menu_layer_destroy(s_simple_menu_layer);
   gbitmap_destroy(s_menu_icon_image);
 }
-
+////////////////////////////// END OF MAIN WINDOW //////////////////////////////////////////
 static void init() 
 {
   s_main_window = window_create();

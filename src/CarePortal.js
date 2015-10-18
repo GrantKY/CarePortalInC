@@ -7,27 +7,37 @@ Pebble.addEventListener('ready',
 Pebble.addEventListener('appmessage',
   function(e) {
     console.log('Treatement being sent');
-  //  console.log(JSON.stringify(e.payload));
+    console.log(JSON.stringify(e.payload));
     
     var name = e.payload.KEY_DATA;
     var result =  e.payload.KEY_VALUE;
-    
-    PostTreatment(name, result);
+    var eventtype = e.payload.KEY_EVENTTYPE;
+ 
+    PostTreatment(name, eventtype, result);
   }
 );
 
 
-
+function isNumber(obj)
+{ 
+  return !isNaN(parseFloat(obj));
+}
 
 //https://ninedof.wordpress.com/2014/02/02/pebble-sdk-2-0-tutorial-6-appmessage-for-pebblekit-js/
-function MongoDBContents(name, enteredby, value)
+function MongoDBContents(name, enteredby, eventtype,  value)
 {
   var contents = {
     "enteredBy" : enteredby,
-    "eventType" : "Note"
+    "eventType" : eventtype,
 
   };
-  contents[name.toLowerCase()] = parseFloat(value);
+
+  if(isNumber(value))
+  {
+    contents[name.toLowerCase()] = parseFloat(value);
+  }
+  else
+    contents[name.toLowerCase()] = value;
   return contents;
 }
 
@@ -49,12 +59,12 @@ function GetSecretKey()
 
 }
 
-function PostTreatment(name, value)
+function PostTreatment(name, eventtype, value)
   {
     var weburl = GetWebURL();
     var secret_key = GetSecretKey();
     var enteredby = GetEnteredBy();
-    var contents = MongoDBContents(name, enteredby, value);
+    var contents = MongoDBContents(name, enteredby, eventtype, value);
 
     console.log('Posting Treatment log');
     console.log(JSON.stringify(contents));

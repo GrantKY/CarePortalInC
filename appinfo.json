@@ -1,6 +1,8 @@
 {
     "appKeys": {
         "KEY_DATA": 5,
+        "KEY_EVENTTYPE": 8,
+        "KEY_EVENT_TYPE": 7,
         "KEY_VALUE": 6
     },
     "capabilities": [
