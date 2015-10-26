@@ -1,9 +1,11 @@
 {
     "appKeys": {
+        "ERROR": 9,
         "KEY_DATA": 5,
         "KEY_EVENTTYPE": 8,
         "KEY_EVENT_TYPE": 7,
-        "KEY_VALUE": 6
+        "KEY_VALUE": 6,
+        "SUCCESS": 10
     },
     "capabilities": [
         ""
@@ -18,7 +20,7 @@
     "shortName": "Care Portal",
     "uuid": "69a53987-379e-4ae7-a3c2-d08e5ffe8511",
     "versionCode": 1,
-    "versionLabel": "2.0",
+    "versionLabel": "4.0",
     "watchapp": {
         "watchface": false
     }

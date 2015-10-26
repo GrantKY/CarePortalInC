@@ -49,13 +49,13 @@ function GetEnteredBy()
 function GetWebURL()
 {
   // TODO: NEED TO SET THE WEB SITE NAME E.G https://yourwwebsitename.azurewebsites.net//api//v1//treatments//
-  return 'https://websiteaddress.azurewebsites.net//api//v1//treatments//';
+  return 'https://yourwebsite.azurewebsites.net//api//v1//treatments//';
 }
 
 function GetSecretKey()
 {
   // TODO: Go to  http://www.sha1-online.com/ and enter your api-secret key and generate the hashed value e.g APISECRETKEY123 == a3bb4e29e4d74b0be1a2a4c360afc97a898782c5
-  return "a3bb4e29e4d74b0be1a2a4c360afc97a898782c5"; 
+  return "ad8b6f4c9ec736c45081ec96bd056e34dc2b509e"; 
 
 }
 
@@ -74,6 +74,23 @@ function PostTreatment(name, eventtype, value)
     http.setRequestHeader("API-SECRET", secret_key);    
     http.setRequestHeader("Content-type", 'application/json');
     http.setRequestHeader('Accept', 'application/json');
-    
-   http.send(JSON.stringify(contents));
- }
+
+    http.onload = function () 
+    {
+        // do something to response
+        console.log("http.onload - ----Status:", http.status);
+  
+        if ( http.status != 200)
+        {
+            console.log("ERROR --------------------");
+            Pebble.sendAppMessage({ ERROR: "Error not able to connect to web site"});
+          }
+        else
+        {
+            Pebble.sendAppMessage({ SUCCESS: "Message send successfully to website."});
+
+        }
+    };
+  
+    http.send(JSON.stringify(contents));
+  }
