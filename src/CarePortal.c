@@ -687,120 +687,8 @@ void pumpsitechange_unload_graph(Window *window) {
    window_destroy(pumpsitechange_window);
 }
 /////////////////////// END OF PUMP SITE CHANGE ///////////////////////////////
-// //////// TEMP BASAL ////////////////////////////////////////////////////////////////
-// char* GetTempBasalLocation(int change)
-// {
-//       TempBasalindex += change;
-      
-//       int count = sizeof(TempBasallist)/sizeof(*TempBasallist);
-//       app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###GetTempBasalLocation: count: %d ###", count);
-//       if(TempBasalindex >= count)
-//       {
-//           TempBasalindex = 0;
-//       }
-//       else if(TempBasalindex < 0)
-//       {
-//           TempBasalindex = 0;      
-//       } 
-        
-//       snprintf(TempBasal, sizeof(TempBasal), "%s", TempBasallist[TempBasalindex]);
-//       return TempBasal;
-// }
 
-
-// void Set_GraphText_layer_TempBasal(TextLayer* currentlayer, int change)
-// {
-//   static char s_packet_id_text[50];
-
-//   char * basalchange = GetTempBasalLocation(change);
-  
-//   snprintf(s_packet_id_text, sizeof(s_packet_id_text), "TempBasal: %s", basalchange);
-//   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "TempBasal: %s", basalchange);
-//   text_layer_set_text(currentlayer, s_packet_id_text);
-//   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_TempBasal: Exiting###");
-// }
-
-// static void up_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
-//   Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, UP);
-// 	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_TempBasal: Exiting###");
-// }
-
-// static void select_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) {
-  
-//     char * basalchange = GetTempBasalLocation(INITIAL);
-//     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_TempBasal - TempBasal: %s", basalchange);
-//     snprintf(outputtext, 100, "You are adding 'TempBasal: %s'  to Care Portal.", basalchange);
-//     snprintf(keyname, sizeof(keyname), "notes");
-//     snprintf(resultvalue, sizeof(resultvalue), "%s", basalchange);
-//     snprintf(eventtype,sizeof(eventtype), "Temp Basal");
-  
-//     create_populate_window();
-// }
-
-// static void down_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) {
-//   Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, DOWN);
-//   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_TempBasal: Exiting###");
-// }
-
-
-// static void click_config_provider_TempBasal(void *context) {
-//   // Register the ClickHandlers
-//   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_TempBasal);
-//   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_TempBasal);
-//   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_TempBasal);
-// }
-
-// void tempbasal_load_graph(Window *window) {
-  
-//   ResetToDefaults();
-//   Layer *window_layer_graph = NULL;
-  
-//   window_layer_graph = window_get_root_layer(tempbasal_window);
-
-//   graph_text_layer_TempBasal = text_layer_create(GRect(0, 0, 144, 170));
- 
-//   Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, INITIAL);
-   
-//   //snprintf(pumpsitechange, 50, "Pump Site Location: %s", GetPumpSiteChangeLocation());
-
-//  // Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal);
-//   //text_layer_set_text(graph_text_layer_TempBasal,  "Pump Site Location: RHS tummy");
-//   text_layer_set_text_color(graph_text_layer_TempBasal, GColorBlack);
-//   text_layer_set_background_color(graph_text_layer_TempBasal, GColorWhite);
-//   text_layer_set_font(graph_text_layer_TempBasal, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-//   text_layer_set_text_alignment(graph_text_layer_TempBasal, GTextAlignmentCenter);
-//   layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_TempBasal));
-  
-//   window_set_click_config_provider(tempbasal_window,(ClickConfigProvider)click_config_provider_TempBasal);
-// }
-
-// void tempbasal_unload_graph(Window *window) {
-//    if(graph_text_layer_TempBasal)
-//    {
-//      text_layer_destroy(graph_text_layer_TempBasal);
-//    }
-//    TempBasalindex = 0;
-//    window_destroy(tempbasal_window);
-// }
-//////// TEMP BASAL ////////////////////////////////////////////////////////////////
-// char* GetTempBasalLocation(int change)
-// {
-//       TempBasalindex += change;
-      
-//       int count = sizeof(TempBasallist)/sizeof(*TempBasallist);
-//       app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###GetTempBasalLocation: count: %d ###", count);
-//       if(TempBasalindex >= count)
-//       {
-//           TempBasalindex = 0;
-//       }
-//       else if(TempBasalindex < 0)
-//       {
-//           TempBasalindex = 0;      
-//       } 
-        
-//       snprintf(TempBasal, sizeof(TempBasal), "%s", TempBasallist[TempBasalindex]);
-//       return TempBasal;
-// }
+///////////////////// START OF TEMP BASAL ////////////////////////////////////
 void SetTempBasalData(int change)
 {
     
@@ -849,10 +737,12 @@ static void select_click_handler_TempBasal(ClickRecognizerRef recognizer, void *
   {
       snprintf(outputtext, sizeof(outputtext), "You are adding 'TempBasal' %+d%% over %d minutes to Care Portal.", iTempBasalPercentage, iTempBasalMinutes);
       snprintf(keyname, sizeof(keyname), "notes");
-      snprintf(resultvalue, sizeof(resultvalue), "'TempBasal' %+d%% over %d minutes.", iTempBasalPercentage, iTempBasalMinutes);
+     // snprintf(resultvalue, sizeof(resultvalue), "%d.%d.", iTempBasalPercentage, iTempBasalMinutes);
+    
+      snprintf(resultvalue, sizeof(resultvalue), "Temp Basal %+d%% over %d minutes.", iTempBasalPercentage, iTempBasalMinutes);
       snprintf(eventtype,sizeof(eventtype), "Temp Basal");
-      snprintf(duration,sizeof(duration), "%d",iTempBasalPercentage );
-      snprintf(percent,sizeof(percent), "%d", iTempBasalMinutes);
+      snprintf(duration,sizeof(duration), "%d",iTempBasalMinutes );
+      snprintf(percent,sizeof(percent), "%d", iTempBasalPercentage);
     
       create_populate_window();
       
@@ -924,7 +814,6 @@ void Set_GraphText_layer_bg(TextLayer* currentlayer, bool currentPartSet, int in
       snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d %s", temp_integerpart, unitsused);
   
   }
-//  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d.%s %s", temp_integerpart, fractionalpart_bg, unitsused);
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
 

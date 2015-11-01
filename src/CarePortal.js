@@ -18,7 +18,7 @@ function GetSecretKey()
 function Units()
 {
     return "mmols";
-  //  return "mg/dl";
+    //return "mg/dl";
 }
 ///////////////////////////////////END DATA TO MANUALLY SET BEFORE BUILDING ///////////////////////
 
@@ -32,7 +32,7 @@ Pebble.addEventListener('ready',
 
 Pebble.addEventListener('appmessage',
   function(e) {
-    console.log('Treatement being sent');
+    console.log('Treatment being sent');
     console.log(JSON.stringify(e.payload));
   
     var contents = MongoDBContents( e);
@@ -91,15 +91,15 @@ function MongoDBContents(e)
   
     if (name !== undefined && name !== null)
     {
-      if(isNumber(result))
-      {
-        contents[name.toLowerCase()] = parseFloat(result);
-      }
-      else
+//       if(isNumber(result))
+//       {
+//         contents[name.toLowerCase()] = parseFloat(result);
+//       }
+//       else
         contents[name.toLowerCase()] = result;
     }  
 
-  // Add Temp Basal Info
+//  Add Temp Basal Info
     if (duration !== undefined && duration !== null)
     {
       contents = AddTempBasalDetails(contents, duration, percent);
