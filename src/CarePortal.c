@@ -325,7 +325,10 @@ void ResetToDefaults()
   
   // BG resets
   memset(bgresult, 0, sizeof(bgresult));
-    
+   
+  // output text reset
+  memset(outputtext, 0, sizeof(outputtext));
+  
   if(mmolsunits)
   {  
     integerpart_bg = 0;
@@ -531,9 +534,9 @@ static void up_click_handler_carbs(ClickRecognizerRef recognizer, void *context)
 }
 
 static void select_click_handler_carbs(ClickRecognizerRef recognizer, void *context) {
-  snprintf(outputtext, 100, "You are adding 'Carbs: %d g'  to Care Portal.", integerpart);
-  snprintf(keyname, 20, "carbs");
-  snprintf(resultvalue, 40, "%d", integerpart);
+  snprintf(outputtext, sizeof(outputtext), "You are adding 'Carbs: %d g'  to Care Portal.", integerpart);
+  snprintf(keyname, sizeof(keyname), "carbs");
+  snprintf(resultvalue, sizeof(resultvalue), "%d", integerpart);
   snprintf(eventtype,sizeof(eventtype), "Note");
 
   create_populate_window();
@@ -737,16 +740,12 @@ static void select_click_handler_TempBasal(ClickRecognizerRef recognizer, void *
   {
       snprintf(outputtext, sizeof(outputtext), "You are adding 'TempBasal' %+d%% over %d minutes to Care Portal.", iTempBasalPercentage, iTempBasalMinutes);
       snprintf(keyname, sizeof(keyname), "notes");
-     // snprintf(resultvalue, sizeof(resultvalue), "%d.%d.", iTempBasalPercentage, iTempBasalMinutes);
-    
       snprintf(resultvalue, sizeof(resultvalue), "Temp Basal %+d%% over %d minutes.", iTempBasalPercentage, iTempBasalMinutes);
       snprintf(eventtype,sizeof(eventtype), "Temp Basal");
       snprintf(duration,sizeof(duration), "%d",iTempBasalMinutes );
       snprintf(percent,sizeof(percent), "%d", iTempBasalPercentage);
     
       create_populate_window();
-      
-    
   }
 }
 
@@ -1021,16 +1020,15 @@ void main_window_unload(Window *window) {
 ////////////////////////////// END OF MAIN WINDOW //////////////////////////////////////////
 static void init() 
 {
-  s_main_window = window_create();
+    s_main_window = window_create();
   
-  // Open AppMessage
-  app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
-   
-  window_set_window_handlers(s_main_window, (WindowHandlers) {
-    .load = main_window_load,
-    .unload = main_window_unload,
-  });
+    // Open AppMessage
+    app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
   
+    window_set_window_handlers(s_main_window, (WindowHandlers) {
+      .load = main_window_load,
+      .unload = main_window_unload,
+    });
   
   // Registering callbacks
     app_message_register_inbox_received(inbox_received_callback);
@@ -1038,10 +1036,8 @@ static void init()
     app_message_register_outbox_failed(outbox_failed_callback);
     app_message_register_outbox_sent(outbox_sent_callback);
   
-  
-  
-  window_stack_push(s_main_window, true);
-}
+    window_stack_push(s_main_window, true);
+  }
 
 static void deinit() {
   window_destroy(s_main_window);

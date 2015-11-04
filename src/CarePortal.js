@@ -1,6 +1,7 @@
 ///////////////////////////////////DATA TO MANUALLY SET BEFORE BUILDING ///////////////////////
 function GetEnteredBy()
 {
+  //You can edit this to read "XXX's pebble" etc if you want to clarify who is entering data in careportal
   return "Pebble";
 }  
 
