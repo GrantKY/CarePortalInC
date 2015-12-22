@@ -3,7 +3,7 @@
 #include "string.h"
 //https://github.com/pebble-examples/feature-simple-menu-layer
 #define NUM_MENU_SECTIONS 2
-#define NUM_FIRST_MENU_ITEMS 4
+#define NUM_FIRST_MENU_ITEMS 5
 #define NUM_SECOND_MENU_ITEMS 1
 
 #define KEY_DATA 5
@@ -12,6 +12,11 @@
 #define KEY_EVENTTYPE 8
 #define ERROR 9
 #define SUCCESS 10
+#define DURATION 11
+#define PERCENT 12
+#define GLUCOSE 13
+#define  BG_UNITS 14
+
 
 #define UP 1
 #define DOWN -1
@@ -24,6 +29,7 @@ static Window *populate_window = NULL;
 static Window *pumpsitechange_window = NULL;
 static Window *tempbasal_window = NULL;
 static Window *uploadresult_window = NULL;
+static Window *bg_window = NULL;
 
 static SimpleMenuLayer *s_simple_menu_layer;
 static SimpleMenuSection s_menu_sections[NUM_MENU_SECTIONS];
@@ -34,44 +40,44 @@ TextLayer *graph_text_layer_populate = NULL;
 TextLayer *graph_text_layer_pumpsitechange = NULL;
 TextLayer *graph_text_layer_TempBasal = NULL;
 TextLayer *graph_text_layer_uploadresult = NULL;
-
+TextLayer *graph_text_layer_bg = NULL;
 
 char messageresultwindow[100];
 
-char outputtext[100];
+char outputtext[150];
 char fractionaText[10];
 
 char keyname[20];
 char resultvalue[40];
 char eventtype[40];
+char duration[10];
+char percent[10];
+char unitsused[10];
+char bgresult[10];
 
 char pumpsitechange[50];
 int pumpsiteindex = 0;
 static char *pumpsitelocations[9] = { "RHS Stomach", "LHS Stomach", "RHS Bottom", "LHS Bottom","RHS Arm", "LHS Arm", "RHS Leg", "LHS Leg", "Other" };
 
-char TempBasal[50];
-int TempBasalindex = 0;
-static char *TempBasallist[7]={ "Plus 10% for 1hr", "Plus 20% for 1hr", "Plus 30% for 1hr", "Plus 40% for 1 hr", "Basal off for 30 mins", "Basal off for 1hr", "other" };
+bool bBasalSet = false;
+char TempBasal[150];
+//int TempBasalindex = 0;
+//static char *TempBasallist[7]={ "Plus 10% for 1hr", "Plus 20% for 1hr", "Plus 30% for 1hr", "Plus 40% for 1 hr", "Basal off for 30 mins", "Basal off for 1hr", "other" };
+int iTempBasalPercentage = 0;
+int iTempBasalMinutes = 0;
 
+// for setting insulin numbers - maybe add _insulin to the end.
+int integerpart = 0;
+int fractionalpart = 0;
+bool bIntegerPart_set = false;  
 
-char* GetTempBasalLocation(int change)
-{
-      TempBasalindex += change;
-      
-      int count = sizeof(TempBasallist)/sizeof(*TempBasallist);
-      app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###GetTempBasalLocation: count: %d ###", count);
-      if(TempBasalindex >= count)
-      {
-          TempBasalindex = 0;
-      }
-      else if(TempBasalindex < 0)
-      {
-          TempBasalindex = 0;      
-      } 
-        
-      snprintf(TempBasal, sizeof(TempBasal), "%s", TempBasallist[TempBasalindex]);
-      return TempBasal;
-}
+// BG variables
+int integerpart_bg = 0;
+int fractionalpart_bg = 0;
+bool mmolsunits = true;
+// bool bIntegerPart_bg_set = false; - not needed anymore since we're setting from the decimal in mmol
+
+static GBitmap *s_menu_icon_image;
 
 /////////////////////////////////////// ERROR HANDLING ///////////////
 
@@ -83,7 +89,7 @@ static void click_config_provider_uploadresult(void *context) {
 }
 void uploadresult_load_window(Window * window)
 {
-    APP_LOG(APP_LOG_LEVEL_INFO, "error_load_window called!");
+    APP_LOG(APP_LOG_LEVEL_INFO, "uploadresult_load_window called!");
     Layer *window_layer_graph = NULL;
     
     window_layer_graph = window_get_root_layer(uploadresult_window);
@@ -151,6 +157,27 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
             snprintf(messageresultwindow, sizeof(messageresultwindow), "Success uploading to website.");
             create_uploadresult_window();
          }
+         break;
+         case BG_UNITS:
+         {
+           APP_LOG(APP_LOG_LEVEL_INFO, "BG_UNITS: %s", new_tuple->value->cstring);
+           snprintf(unitsused, sizeof(unitsused),"%s", new_tuple->value->cstring );
+           
+           // fixed the mmol to be inline with the mmol for care portal (was mmols)
+           char* mmol= "mmol"; 
+           if(strstr(unitsused, mmol)!= NULL )
+           {
+             mmolsunits = true;
+             integerpart_bg = 5;
+             fractionalpart_bg = 5;
+             
+           } 
+           else
+           {
+             mmolsunits = false;
+             integerpart_bg = 100;
+           }
+        }
         break;
     }
 
@@ -172,19 +199,6 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
-
-int integerpart = 0;
-int fractionalpart=0;
-bool bIntegerPart_set = false;
-
-static GBitmap *s_menu_icon_image;
 
 int Set_IntegerPart(int increment)
 {
@@ -243,6 +257,63 @@ void Set_Part(bool currentPartSet, int increment)
       }
     }
 }
+int Set_IntegerPart_BG(int increment)
+{
+    integerpart_bg+= increment;  
+    if(integerpart_bg < 0)
+    {
+      integerpart_bg = 0;
+    }
+  
+    return integerpart_bg;
+}
+
+int Set_FractionPart_BG(int increment)
+{
+  fractionalpart_bg += increment;
+  if(fractionalpart_bg < 0)
+  {
+      if (integerpart_bg > 0)
+      { 
+        integerpart_bg--;
+        fractionalpart_bg = 9; 
+      }
+      else 
+      {
+        fractionalpart_bg = 0; 
+      }
+  }
+  else if(fractionalpart_bg >=10)
+  {
+    integerpart_bg++;  
+    fractionalpart_bg = 0;
+  }
+   return fractionalpart_bg;
+}
+
+void Set_Part_BG(bool currentPartSet, int increment) {
+
+  if(mmolsunits)
+  {
+    Set_FractionPart_BG(increment);
+  }
+  else  
+  {
+    Set_IntegerPart_BG(increment);
+  }
+
+  // make it increment the decimals directly if in mmols  
+    
+  //  if(!bIntegerPart_bg_set)
+  //  {      
+  //    Set_IntegerPart_BG(increment);
+  //  }
+  //  else
+  //  {
+  //    Set_FractionPart_BG(increment);
+  //  }
+
+}
  char* GetPumpSiteChangeLocation(int change)
 {
    pumpsiteindex += change;
@@ -255,7 +326,8 @@ void Set_Part(bool currentPartSet, int increment)
    }
    else if(pumpsiteindex < 0)
    {
-     pumpsiteindex = 0;      
+     // ML - fixed so it wraps around when down is pressed at the bottom of the list.
+     pumpsiteindex = count - 1;      
    } 
    snprintf(pumpsitechange, sizeof(pumpsitechange), "%s", pumpsitelocations[pumpsiteindex]);
    return pumpsitechange;
@@ -263,9 +335,41 @@ void Set_Part(bool currentPartSet, int increment)
 
 void ResetToDefaults()
 {
+  memset(keyname, 0, sizeof(keyname));
+  memset(resultvalue, 0, sizeof(resultvalue));
   integerpart = 0;
   fractionalpart = 0;
   bIntegerPart_set = false;
+  
+  // Temp Basal
+  bBasalSet = false;
+  iTempBasalPercentage = 0;
+  iTempBasalMinutes = 0;
+  // reset memory allocation and initialise back to zero length
+  memset(duration, 0, sizeof(duration));
+  memset(percent, 0, sizeof(percent));
+  
+  // BG resets
+  memset(bgresult, 0, sizeof(bgresult));
+   
+  // output text reset
+  memset(outputtext, 0, sizeof(outputtext));
+  
+  // set both mmol and mg/dl defaults
+  if(mmolsunits)
+  {  
+    integerpart_bg = 5;
+    fractionalpart_bg = 6;  
+  }
+  else
+  {
+    integerpart_bg = 100;
+  }
+  // fractionalpart_bg = 0;
+  
+  // not using this variable anymore, starting with decimal settings
+  // bIntegerPart_bg_set = false;
+  
 }
 
 //////////////////////// POPULATE WINDOW ///////////////////////////////////////
@@ -275,26 +379,49 @@ void select_click_handler_populate(ClickRecognizerRef recognizer, void *context)
   
    if(result == APP_MSG_OK)
     { 
-      char * const_key;
-      const_key = keyname;
-  
-      char * const_result;
-      const_result = resultvalue;
+      if(strlen(keyname) != 0)
+      {
+          char *const_key;
+          const_key = keyname;
+          dict_write_cstring(iter, KEY_DATA, const_key);
+      }
+     
+      if(strlen(resultvalue) != 0)
+      {
+          char *const_result;
+          const_result = resultvalue;
+          dict_write_cstring(iter, KEY_VALUE, const_result);
+      }
       
-      char *const_eventtype;
-      const_eventtype = eventtype;
+      if(strlen(eventtype) != 0)
+      {
+         char *const_eventtype;
+         const_eventtype = eventtype;
+         dict_write_cstring(iter, KEY_EVENTTYPE, const_eventtype);
+      }
      
-     
-      app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: const_key: %s ###", const_key);
-      app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: const_result: %s ###", const_result);
-      app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: const_eventtype: %s ###", const_eventtype);
-   
-     
-      dict_write_cstring(iter, KEY_DATA, const_key);
-      dict_write_cstring(iter, KEY_VALUE, const_result);
-      dict_write_cstring(iter, KEY_EVENTTYPE, const_eventtype);
-      
+      if(strlen(duration) != 0)
+      {
+          char *const_duration;
+          const_duration = duration;
+          dict_write_cstring(iter, DURATION, const_duration);
+      }
+
+      if(strlen(percent) != 0)
+      {
+          char *const_percent;
+          const_percent = percent;
+          dict_write_cstring(iter, PERCENT, const_percent);
+      }
  
+      if(strlen(bgresult) != 0)
+      {
+          char *const_bgresult;
+          const_bgresult = bgresult;
+          dict_write_cstring(iter, GLUCOSE, const_bgresult);
+      }
+ 
+     
       app_message_outbox_send();
     
       window_stack_pop_all(true);
@@ -353,13 +480,6 @@ void create_populate_window()
 }
 
 ///////////////////// INSULIN //////////////////////
-void select_long_click_release_handler(ClickRecognizerRef recognizer, void *context) {
-
-  // Dummy Function does not do anthing
-}
-
-
-
 void Set_GraphText_layer_Insulin(TextLayer* currentlayer, bool currentPartSet, int increment)
 {
   Set_Part(bIntegerPart_set, increment);
@@ -400,6 +520,8 @@ static void down_click_handler_insulin(ClickRecognizerRef recognizer, void *cont
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_insulin: Exiting###");
 }
 
+/*
+// removed long click up and downs with repeats
 void select_long_click_up_handler_insulin(ClickRecognizerRef recognizer, void *context) {
    
     Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, 10);
@@ -408,18 +530,30 @@ void select_long_click_up_handler_insulin(ClickRecognizerRef recognizer, void *c
 
 void select_long_click_down_handler_insulin(ClickRecognizerRef recognizer, void *context) {
    
-    Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, 0);
+    Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, -10);
   
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_down_handler_insulin: Exiting###");
 }
+
+void select_long_click_release_handler(ClickRecognizerRef recognizer, void *context) {
+
+  // Dummy Function does not do anthing
+}
+
+*/
 
 static void click_config_provider_insulin(void *context) {
   // Register the ClickHandlers
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_insulin);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_insulin);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_insulin);
-  window_long_click_subscribe(BUTTON_ID_UP, 700, select_long_click_up_handler_insulin, select_long_click_release_handler);
-  window_long_click_subscribe(BUTTON_ID_DOWN, 700, select_long_click_down_handler_insulin, select_long_click_release_handler);
+
+  // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
+  // you can also get rid of the select_long_click handlers for click and release for up and down
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_insulin);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_insulin);
+  // window_long_click_subscribe(BUTTON_ID_UP, 700, select_long_click_up_handler_insulin, select_long_click_release_handler);
+  // window_long_click_subscribe(BUTTON_ID_DOWN, 700, select_long_click_down_handler_insulin, select_long_click_release_handler);
 }
 
 ////////////////////// CARBS WINDOW///////////////////////////////////////////////////////////
@@ -438,9 +572,9 @@ static void up_click_handler_carbs(ClickRecognizerRef recognizer, void *context)
 }
 
 static void select_click_handler_carbs(ClickRecognizerRef recognizer, void *context) {
-  snprintf(outputtext, 100, "You are adding 'Carbs: %d g'  to Care Portal.", integerpart);
-  snprintf(keyname, 20, "carbs");
-  snprintf(resultvalue, 40, "%d", integerpart);
+  snprintf(outputtext, sizeof(outputtext), "You are adding 'Carbs: %d g'  to Care Portal.", integerpart);
+  snprintf(keyname, sizeof(keyname), "carbs");
+  snprintf(resultvalue, sizeof(resultvalue), "%d", integerpart);
   snprintf(eventtype,sizeof(eventtype), "Note");
 
   create_populate_window();
@@ -451,6 +585,9 @@ static void down_click_handler_carbs(ClickRecognizerRef recognizer, void *contex
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_carbs: Exiting###");
 }
 
+/*
+// removed long click up and down handlers with repeats
+
 void select_long_click_up_handler_carbs(ClickRecognizerRef recognizer, void *context) {
   Set_GraphText_layer_carbs(graph_text_layer_carbs, 10);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_up_handler_carbs: Exiting###");
@@ -460,14 +597,20 @@ void select_long_click_down_handler_carbs(ClickRecognizerRef recognizer, void *c
   Set_GraphText_layer_carbs(graph_text_layer_carbs, -10);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_down_handler_carbs: Exiting###");
 }
+*/
 
 static void click_config_provider_carbs(void *context) {
   // Register the ClickHandlers
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_carbs);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_carbs);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_carbs);
-  window_long_click_subscribe(BUTTON_ID_UP, 700, select_long_click_up_handler_carbs, select_long_click_release_handler);
-  window_long_click_subscribe(BUTTON_ID_DOWN, 700, select_long_click_down_handler_carbs, select_long_click_release_handler);
+
+  // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
+  // you can also get rid of the select_long_click handlers for click and release for up and down
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_carbs);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_carbs);
+  // window_long_click_subscribe(BUTTON_ID_UP, 700, select_long_click_up_handler_carbs, select_long_click_release_handler);
+  // window_long_click_subscribe(BUTTON_ID_DOWN, 700, select_long_click_down_handler_carbs, select_long_click_release_handler);
 }
 
 void carbs_load_graph(Window *window) {
@@ -576,11 +719,6 @@ void pumpsitechange_load_graph(Window *window) {
   graph_text_layer_pumpsitechange = text_layer_create(GRect(0, 0, 144, 170));
  
   Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, INITIAL);
-   
-  //snprintf(pumpsitechange, 50, "Pump Site Location: %s", GetPumpSiteChangeLocation());
-
- // Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange);
-  //text_layer_set_text(graph_text_layer_pumpsitechange,  "Pump Site Location: RHS tummy");
   text_layer_set_text_color(graph_text_layer_pumpsitechange, GColorBlack);
   text_layer_set_background_color(graph_text_layer_pumpsitechange, GColorWhite);
   text_layer_set_font(graph_text_layer_pumpsitechange, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
@@ -599,37 +737,67 @@ void pumpsitechange_unload_graph(Window *window) {
    window_destroy(pumpsitechange_window);
 }
 /////////////////////// END OF PUMP SITE CHANGE ///////////////////////////////
-//////// TEMP BASAL ////////////////////////////////////////////////////////////////
+
+///////////////////// START OF TEMP BASAL ////////////////////////////////////
+void SetTempBasalData(int change)
+{
+    
+    if(!bBasalSet)
+    {
+      iTempBasalPercentage += change;
+      if(iTempBasalPercentage < -100)
+        iTempBasalPercentage = -100;
+      else if (iTempBasalPercentage > 200)
+        iTempBasalPercentage = 200;
+    }
+    else
+    {
+      iTempBasalMinutes += change;
+      if(iTempBasalMinutes < 0)
+        iTempBasalMinutes = 0;
+    }
+}
+
 void Set_GraphText_layer_TempBasal(TextLayer* currentlayer, int change)
 {
   static char s_packet_id_text[50];
+ 
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "TempBasal: %+d%% over %d minutes", iTempBasalPercentage, iTempBasalMinutes);
 
-  char * basalchange = GetTempBasalLocation(change);
-  
-  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "TempBasal: %s", basalchange);
-  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "TempBasal: %s", basalchange);
   text_layer_set_text(currentlayer, s_packet_id_text);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_TempBasal: Exiting###");
 }
 
 static void up_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
+ 
+  SetTempBasalData(10);  
+  
   Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, UP);
 	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_TempBasal: Exiting###");
 }
 
 static void select_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) {
   
-    char * basalchange = GetTempBasalLocation(INITIAL);
-    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_TempBasal - TempBasal: %s", basalchange);
-    snprintf(outputtext, 100, "You are adding 'TempBasal: %s'  to Care Portal.", basalchange);
-    snprintf(keyname, sizeof(keyname), "notes");
-    snprintf(resultvalue, sizeof(resultvalue), "%s", basalchange);
-    snprintf(eventtype,sizeof(eventtype), "Temp Basal");
   
-    create_populate_window();
+  if(!bBasalSet)
+  {
+      bBasalSet = true;
+  }
+  else
+  {
+      snprintf(outputtext, sizeof(outputtext), "You are adding 'TempBasal' %+d%% over %d minutes to Care Portal.", iTempBasalPercentage, iTempBasalMinutes);
+      snprintf(keyname, sizeof(keyname), "notes");
+      snprintf(resultvalue, sizeof(resultvalue), "Temp Basal %+d%% over %d minutes.", iTempBasalPercentage, iTempBasalMinutes);
+      snprintf(eventtype,sizeof(eventtype), "Temp Basal");
+      snprintf(duration,sizeof(duration), "%d",iTempBasalMinutes );
+      snprintf(percent,sizeof(percent), "%d", iTempBasalPercentage);
+    
+      create_populate_window();
+  }
 }
 
 static void down_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) {
+  SetTempBasalData(-10);  
   Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, DOWN);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_TempBasal: Exiting###");
 }
@@ -652,11 +820,7 @@ void tempbasal_load_graph(Window *window) {
   graph_text_layer_TempBasal = text_layer_create(GRect(0, 0, 144, 170));
  
   Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, INITIAL);
-   
-  //snprintf(pumpsitechange, 50, "Pump Site Location: %s", GetPumpSiteChangeLocation());
-
- // Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal);
-  //text_layer_set_text(graph_text_layer_TempBasal,  "Pump Site Location: RHS tummy");
+  
   text_layer_set_text_color(graph_text_layer_TempBasal, GColorBlack);
   text_layer_set_background_color(graph_text_layer_TempBasal, GColorWhite);
   text_layer_set_font(graph_text_layer_TempBasal, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
@@ -670,11 +834,139 @@ void tempbasal_unload_graph(Window *window) {
    if(graph_text_layer_TempBasal)
    {
      text_layer_destroy(graph_text_layer_TempBasal);
-   }
-   TempBasalindex = 0;
+   } 
+  
+   ResetToDefaults();
    window_destroy(tempbasal_window);
 }
-/////////////////////// END OF Temp Basal CHANGE ///////////////////////////////
+
+///////////////////// END OF Temp Basal CHANGE ///////////////////////////////
+
+///////////////////// Start of glucose //////////////////////
+
+// removed the currentPartSet as we're now setting decimals to start with
+// void Set_GraphText_layer_bg(TextLayer* currentlayer, bool currentPartSet, int increment)
+void Set_GraphText_layer_bg(TextLayer* currentlayer, int increment)
+{
+  Set_Part_BG(bIntegerPart_set, increment);
+  int temp_integerpart = integerpart_bg;
+  static char s_packet_id_text[30];
+  
+  if(mmolsunits)
+  {
+      snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d.%d %s", temp_integerpart, fractionalpart_bg, unitsused);
+  }
+  else
+  {
+      snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d %s", temp_integerpart, unitsused);
+  
+  }
+  text_layer_set_text(currentlayer, s_packet_id_text);
+}
+
+static void select_click_handler_bg(ClickRecognizerRef recognizer, void *context) {
+//    if(!bIntegerPart_bg_set && mmolsunits )
+//    {
+//      bIntegerPart_bg_set = true;  
+//    }
+//    else
+//    {
+  if(mmolsunits)
+    {
+      snprintf(outputtext, sizeof(outputtext), "You are adding 'BG result: %d.%d %s'  to Care Portal.", integerpart_bg, fractionalpart_bg, unitsused);
+      snprintf(bgresult, sizeof(bgresult), "%d.%d", integerpart_bg,fractionalpart_bg );
+    }
+    else
+    {
+      snprintf(outputtext, sizeof(outputtext), "You are adding 'BG result: %d %s'  to Care Portal.", integerpart_bg,unitsused);
+      snprintf(bgresult, sizeof(bgresult), "%d", integerpart_bg);
+    }
+  
+    snprintf(eventtype,sizeof(eventtype), "BG Check");
+    create_populate_window();
+//      bIntegerPart_bg_set = false;
+//    }
+}
+
+static void up_click_handler_bg(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
+	  Set_GraphText_layer_bg(graph_text_layer_bg, 1);
+	  // Set_GraphText_layer_bg(graph_text_layer_bg,bIntegerPart_bg_set, 1);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
+}
+
+
+static void down_click_handler_bg(ClickRecognizerRef recognizer, void *context) {
+   
+    Set_GraphText_layer_bg(graph_text_layer_bg, -1);
+    //Set_GraphText_layer_bg(graph_text_layer_bg,bIntegerPart_bg_set, -1);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
+}
+
+/*
+// eliminated the long clicks and replaced with repeaters 
+
+void select_long_click_up_handler_bg(ClickRecognizerRef recognizer, void *context) {
+   
+    Set_GraphText_layer_bg(graph_text_layer_bg,bIntegerPart_bg_set, 10);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_up_handler_bg: Exiting###");
+}
+
+void select_long_click_down_handler_bg(ClickRecognizerRef recognizer, void *context) {
+   
+    Set_GraphText_layer_bg(graph_text_layer_bg,bIntegerPart_bg_set, -10);
+  
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_down_handler_bg: Exiting###");
+}
+*/ 
+static void click_config_provider_bg(void *context) {
+  // Register the ClickHandlers
+  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_bg);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_bg);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_bg);
+
+  // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
+  // you can also get rid of the select_long_click handlers for click and release for up and down
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_bg);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_bg);
+  // window_long_click_subscribe(BUTTON_ID_UP, 700, select_long_click_up_handler_bg, select_long_click_release_handler);
+  // window_long_click_subscribe(BUTTON_ID_DOWN, 700, select_long_click_down_handler_bg, select_long_click_release_handler);
+}
+void bg_load_graph(Window *window) {
+  
+  ResetToDefaults();
+  Layer *window_layer_graph = NULL;
+  
+  window_layer_graph = window_get_root_layer(bg_window);
+
+  graph_text_layer_bg = text_layer_create(GRect(0, 0, 144, 27));
+
+  if(mmolsunits)
+  {
+     snprintf(outputtext, sizeof(outputtext), "BG: %d.%d %s", integerpart_bg, fractionalpart_bg, unitsused);
+  }
+  else
+  {
+      snprintf(outputtext, sizeof(outputtext), "BG: %d %s", integerpart_bg, unitsused);
+  }
+
+  text_layer_set_text(graph_text_layer_bg, outputtext);
+  text_layer_set_text_color(graph_text_layer_bg, GColorBlack);
+  text_layer_set_background_color(graph_text_layer_bg, GColorWhite);
+  text_layer_set_font(graph_text_layer_bg, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(graph_text_layer_bg, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_bg));
+  
+  window_set_click_config_provider(bg_window,(ClickConfigProvider)click_config_provider_bg);
+}
+
+void bg_unload_graph(Window *window) {
+   if(graph_text_layer_bg)
+   {
+     text_layer_destroy(graph_text_layer_bg);
+   }
+   window_destroy(bg_window);
+}
+////////////end of bg mmol window///////////////
 ///////////////////////////// MAIN WINDOW /////////////////////////////////
 static void menu_select_callback(int index, void *ctx) {
   
@@ -716,6 +1008,18 @@ static void menu_select_callback(int index, void *ctx) {
   } 
   else if(index == 3)
   {
+        bg_window = window_create();
+    	  window_set_window_handlers(bg_window, 
+    							   (WindowHandlers){
+    									                .load   = bg_load_graph,
+    								                  .unload = bg_unload_graph,
+                                     }
+    							   );  
+    							  
+    	  window_stack_push(bg_window, true);
+  }
+  else if(index == 4)
+  {
         pumpsitechange_window = window_create();
     	  window_set_window_handlers(pumpsitechange_window, 
     							   (WindowHandlers){
@@ -745,6 +1049,10 @@ static void main_window_load(Window *window) {
     .callback = menu_select_callback,
   };
    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+    .title = "Blood Glucose",
+    .callback = menu_select_callback,
+  };
+   s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
     .title = "Pump Site Change",
     .callback = menu_select_callback,
   };
@@ -770,16 +1078,15 @@ void main_window_unload(Window *window) {
 ////////////////////////////// END OF MAIN WINDOW //////////////////////////////////////////
 static void init() 
 {
-  s_main_window = window_create();
+    s_main_window = window_create();
   
-  // Open AppMessage
-  app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
-   
-  window_set_window_handlers(s_main_window, (WindowHandlers) {
-    .load = main_window_load,
-    .unload = main_window_unload,
-  });
+    // Open AppMessage
+    app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
   
+    window_set_window_handlers(s_main_window, (WindowHandlers) {
+      .load = main_window_load,
+      .unload = main_window_unload,
+    });
   
   // Registering callbacks
     app_message_register_inbox_received(inbox_received_callback);
@@ -787,10 +1094,8 @@ static void init()
     app_message_register_outbox_failed(outbox_failed_callback);
     app_message_register_outbox_sent(outbox_sent_callback);
   
-  
-  
-  window_stack_push(s_main_window, true);
-}
+    window_stack_push(s_main_window, true);
+  }
 
 static void deinit() {
   window_destroy(s_main_window);
