@@ -1,33 +1,21 @@
-///////////////////////////////////DATA TO MANUALLY SET BEFORE BUILDING ///////////////////////
-function GetEnteredBy()
-{
-  //You can edit this to read "XXX's pebble" etc if you want to clarify who is entering data in careportal
-  return "Pebble";
-}  
+// Removed the auto codes and replace with configuration screen  below
 
-function GetWebURL()
-{
-  // TODO: NEED TO SET THE WEB SITE NAME E.G https://yourwwebsitename.azurewebsites.net//api//v1//treatments//
-  return 'https://yourwebsitename.azurewebsites.net//api//v1//treatments//';
-}
+// adding configuration screen for the units, secret key, web URL and Pebble name
+Pebble.addEventListener("showConfiguration", function(e) {
+                        console.log("Showing Configuration", JSON.stringify(e));
+                        Pebble.openURL('http://longlandm.github.io/careportalpebble/config_1.html');
+                        });
 
-function GetSecretKey()
-{
-  // TODO: Go to  http://www.sha1-online.com/ and enter your api-secret key and generate the hashed value e.g APISECRETKEY123 == a3bb4e29e4d74b0be1a2a4c360afc97a898782c5
-  return "a3bb4e29e4d74b0be1a2a4c360afc97a898782c5"; 
-}
-function Units()
-{
-    return "mmols";
-    //return "mg/dl";
-}
-///////////////////////////////////END DATA TO MANUALLY SET BEFORE BUILDING ///////////////////////
-
+Pebble.addEventListener("webviewclosed", function(e) {
+                        var opts = JSON.parse(decodeURIComponent(e.response));
+                        console.log("CLOSE CONFIG OPTIONS = " + JSON.stringify(opts));
+                        // store configuration in local storage
+                        localStorage.setItem('portalPebble', JSON.stringify(opts));                      
+                        });
 
 Pebble.addEventListener('ready',
   function(e) {
     console.log('JavaScript app ready and running!');
-    Pebble.sendAppMessage({ BG_UNITS: Units()});
   }
 );
 
@@ -36,8 +24,32 @@ Pebble.addEventListener('appmessage',
     console.log('Treatment being sent');
     console.log(JSON.stringify(e.payload));
   
-    var contents = MongoDBContents( e);
-    PostTreatment(contents);
+    // check for configuration data
+    var message;
+    //get options from configuration window
+
+    var opts = [ ].slice.call(arguments).pop( );
+    opts = JSON.parse(localStorage.getItem('portalPebble'));
+
+	  // check if endpoint exists
+    if (!opts.endpoint) {
+        // endpoint doesn't exist, return no endpoint to watch
+		// " " (space) shows these are init values, not bad or null values
+        message = {
+          endpoint: " ",
+          pebblename: " ",
+          secretAPI: " ",
+          units: " ",
+          hashAPI: " ",
+        };
+        
+        console.log("NO ENDPOINT JS message", JSON.stringify(message));
+        Pebble.sendAppMessage(JSON.stringify(message));
+        return;   
+    }
+    
+    var contents = MongoDBContents(e, opts.pebblename, opts.units);
+    PostTreatment(contents, opts.endpoint, opts.hashAPI);
   }
 );
 
@@ -75,18 +87,17 @@ function isNumber(obj)
 }
 
 //https://ninedof.wordpress.com/2014/02/02/pebble-sdk-2-0-tutorial-6-appmessage-for-pebblekit-js/
-function MongoDBContents(e)
+function MongoDBContents(e, enteredBy, units)
 {
     var name = e.payload.KEY_DATA; 
     var result =  e.payload.KEY_VALUE;
     var eventtype = e.payload.KEY_EVENTTYPE;
-    var enteredby = GetEnteredBy();
     var duration = e.payload.DURATION;
     var percent = e.payload.PERCENT;
     var glucose = e.payload.GLUCOSE;
   
     var contents = {
-      "enteredBy" : enteredby,
+      "enteredBy" : enteredBy,
       "eventType" : eventtype,
     };
   
@@ -109,17 +120,19 @@ function MongoDBContents(e)
      // Add Glucose Level info
     if (glucose !== undefined && glucose !== null)
     {
-      contents = AddBGData(contents, glucose, Units());
+      contents = AddBGData(contents, glucose, units);
     }
   
     return contents;
 }
 
 
-function PostTreatment(contents)
-  {
-    var weburl = GetWebURL();
-    var secret_key = GetSecretKey();
+function PostTreatment(contents, endpoint, hashAPI) {
+    var weburl = endpoint;
+    var secret_key = hashAPI;
+  
+    // var weburl = GetWebURL();
+    // var secret_key = GetSecretKey();
 
     console.log('Posting Treatment log');
     console.log(JSON.stringify(contents));
