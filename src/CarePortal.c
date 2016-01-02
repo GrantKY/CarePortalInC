@@ -112,7 +112,6 @@ void uploadresult_unload_window(Window *window)
      text_layer_destroy(graph_text_layer_uploadresult);
    }
   window_destroy(uploadresult_window);
-  
 }
 
 void create_uploadresult_window()
@@ -124,10 +123,7 @@ void create_uploadresult_window()
                                  .unload = uploadresult_unload_window,
                                }
                               );  
-  
-  
     window_stack_push(uploadresult_window, true);
-  
 }
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
@@ -136,12 +132,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   // Get the first pair
   Tuple *new_tuple = dict_read_first(iterator);
 
-
   // Process all pairs present
   while(new_tuple != NULL)
   {
        switch (new_tuple->key) {
-  
         case ERROR:
         {
             APP_LOG(APP_LOG_LEVEL_INFO, "Error Message: %s", new_tuple->value->cstring);
@@ -170,7 +164,6 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
              mmolsunits = true;
              integerpart_bg = 5;
              fractionalpart_bg = 5;
-             
            } 
            else
            {
@@ -180,7 +173,6 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         }
         break;
     }
-
     // Get next pair, if any
     new_tuple = dict_read_next(iterator);
   }
@@ -200,6 +192,8 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
 
 /////////////////////////////////////////////////////////////////////////////////////
 
+// function used in incrementing the insulin count integer value.
+// if the value is less than 0 set it to 0.
 int Set_IntegerPart(int increment)
 {
     integerpart+= increment;  
@@ -211,20 +205,23 @@ int Set_IntegerPart(int increment)
     return integerpart;
 }
 
+// function used to set the decimal value for the insulin count
+// possible todo:  change to similar function as BG for mmol that increments from decimal entirely and not 2 stage
 int Set_FractionPart(int increment)
 {
   fractionalpart += increment;
-  if(fractionalpart< 0)
+  if(fractionalpart < 0)
   {
-      fractionalpart = 0; 
+    fractionalpart = 0;
   }
   else if(fractionalpart >=100)
   {
       fractionalpart = 0;
   }
-   return fractionalpart;
+  return fractionalpart;
 }
 
+// function to return the 2 digit decimal as 2 characters if the decimal value is less than 2 digits  (.00, or .05)
 char* GetFractionaPartAsChar() 
 {
   if(fractionalpart<=5)
@@ -239,6 +236,8 @@ char* GetFractionaPartAsChar()
   return fractionaText; 
 }
 
+// determines if the insulin setting is doing the integer section or the decimal section and sets the appropriate value
+// possible todo: bring in line with the BG increment from decimal feature
 void Set_Part(bool currentPartSet, int increment)
 {
     if(!currentPartSet)
@@ -257,6 +256,8 @@ void Set_Part(bool currentPartSet, int increment)
       }
     }
 }
+
+// determines the BG settings for the mg/dl settings.  mmol now uses just the decimal incrementer.
 int Set_IntegerPart_BG(int increment)
 {
     integerpart_bg+= increment;  
@@ -268,6 +269,7 @@ int Set_IntegerPart_BG(int increment)
     return integerpart_bg;
 }
 
+// incremental change to the decimal section of BG.  Rolls over integer section on boundaries (>9, increment integer, <0 decrement integer if it is not 0)
 int Set_FractionPart_BG(int increment)
 {
   fractionalpart_bg += increment;
@@ -291,6 +293,7 @@ int Set_FractionPart_BG(int increment)
    return fractionalpart_bg;
 }
 
+// determines if it should be doing the decimal increments for mmol or the integer increment for mg/dl
 void Set_Part_BG(bool currentPartSet, int increment) {
 
   if(mmolsunits)
@@ -301,19 +304,9 @@ void Set_Part_BG(bool currentPartSet, int increment) {
   {
     Set_IntegerPart_BG(increment);
   }
-
-  // make it increment the decimals directly if in mmols  
-    
-  //  if(!bIntegerPart_bg_set)
-  //  {      
-  //    Set_IntegerPart_BG(increment);
-  //  }
-  //  else
-  //  {
-  //    Set_FractionPart_BG(increment);
-  //  }
-
 }
+
+// returns the string of the new site location selection
  char* GetPumpSiteChangeLocation(int change)
 {
    pumpsiteindex += change;
@@ -326,13 +319,13 @@ void Set_Part_BG(bool currentPartSet, int increment) {
    }
    else if(pumpsiteindex < 0)
    {
-     // ML - fixed so it wraps around when down is pressed at the bottom of the list.
      pumpsiteindex = count - 1;      
    } 
    snprintf(pumpsitechange, sizeof(pumpsitechange), "%s", pumpsitelocations[pumpsiteindex]);
    return pumpsitechange;
 }
 
+// return all variables to the initial values 
 void ResetToDefaults()
 {
   memset(keyname, 0, sizeof(keyname));
@@ -365,11 +358,6 @@ void ResetToDefaults()
   {
     integerpart_bg = 100;
   }
-  // fractionalpart_bg = 0;
-  
-  // not using this variable anymore, starting with decimal settings
-  // bIntegerPart_bg_set = false;
-  
 }
 
 //////////////////////// POPULATE WINDOW ///////////////////////////////////////
@@ -520,40 +508,14 @@ static void down_click_handler_insulin(ClickRecognizerRef recognizer, void *cont
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_insulin: Exiting###");
 }
 
-/*
-// removed long click up and downs with repeats
-void select_long_click_up_handler_insulin(ClickRecognizerRef recognizer, void *context) {
-   
-    Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, 10);
-    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_up_handler_insulin: Exiting###");
-}
-
-void select_long_click_down_handler_insulin(ClickRecognizerRef recognizer, void *context) {
-   
-    Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, -10);
-  
-    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_down_handler_insulin: Exiting###");
-}
-
-void select_long_click_release_handler(ClickRecognizerRef recognizer, void *context) {
-
-  // Dummy Function does not do anthing
-}
-
-*/
-
 static void click_config_provider_insulin(void *context) {
   // Register the ClickHandlers
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_insulin);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_insulin);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_insulin);
-
   // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
-  // you can also get rid of the select_long_click handlers for click and release for up and down
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_insulin);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_insulin);
-  // window_long_click_subscribe(BUTTON_ID_UP, 700, select_long_click_up_handler_insulin, select_long_click_release_handler);
-  // window_long_click_subscribe(BUTTON_ID_DOWN, 700, select_long_click_down_handler_insulin, select_long_click_release_handler);
 }
 
 ////////////////////// CARBS WINDOW///////////////////////////////////////////////////////////
@@ -585,32 +547,14 @@ static void down_click_handler_carbs(ClickRecognizerRef recognizer, void *contex
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_carbs: Exiting###");
 }
 
-/*
-// removed long click up and down handlers with repeats
-
-void select_long_click_up_handler_carbs(ClickRecognizerRef recognizer, void *context) {
-  Set_GraphText_layer_carbs(graph_text_layer_carbs, 10);
-  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_up_handler_carbs: Exiting###");
-}
-
-void select_long_click_down_handler_carbs(ClickRecognizerRef recognizer, void *context) {
-  Set_GraphText_layer_carbs(graph_text_layer_carbs, -10);
-  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_down_handler_carbs: Exiting###");
-}
-*/
-
 static void click_config_provider_carbs(void *context) {
   // Register the ClickHandlers
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_carbs);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_carbs);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_carbs);
-
   // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
-  // you can also get rid of the select_long_click handlers for click and release for up and down
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_carbs);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_carbs);
-  // window_long_click_subscribe(BUTTON_ID_UP, 700, select_long_click_up_handler_carbs, select_long_click_release_handler);
-  // window_long_click_subscribe(BUTTON_ID_DOWN, 700, select_long_click_down_handler_carbs, select_long_click_release_handler);
 }
 
 void carbs_load_graph(Window *window) {
@@ -676,7 +620,6 @@ void Set_GraphText_layer_pumpsitechange(TextLayer* currentlayer, int change)
   snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Pump Site Location: %s", sitechange);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "Pump Site Location: %s", sitechange);
   text_layer_set_text(currentlayer, s_packet_id_text);
-  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_pumpsitechange: Exiting###");
 }
 
 static void up_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
@@ -685,7 +628,6 @@ static void up_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void 
 }
 
 static void select_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void *context) {
-  
     char * sitechange = GetPumpSiteChangeLocation(INITIAL);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_pumpsitechange - Pump Site Location: %s", sitechange);
     snprintf(outputtext, 100, "You are adding 'Pump Site Location: %s'  to Care Portal.", sitechange);
@@ -808,6 +750,8 @@ static void click_config_provider_TempBasal(void *context) {
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_TempBasal);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_TempBasal);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_TempBasal);
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_TempBasal);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_TempBasal);
 }
 
 void tempbasal_load_graph(Window *window) {
@@ -844,8 +788,7 @@ void tempbasal_unload_graph(Window *window) {
 
 ///////////////////// Start of glucose //////////////////////
 
-// removed the currentPartSet as we're now setting decimals to start with
-// void Set_GraphText_layer_bg(TextLayer* currentlayer, bool currentPartSet, int increment)
+// removed the currentPartSet as we're now setting decimals to start with for mmol
 void Set_GraphText_layer_bg(TextLayer* currentlayer, int increment)
 {
   Set_Part_BG(bIntegerPart_set, increment);
@@ -859,77 +802,43 @@ void Set_GraphText_layer_bg(TextLayer* currentlayer, int increment)
   else
   {
       snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d %s", temp_integerpart, unitsused);
-  
   }
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
 
 static void select_click_handler_bg(ClickRecognizerRef recognizer, void *context) {
-//    if(!bIntegerPart_bg_set && mmolsunits )
-//    {
-//      bIntegerPart_bg_set = true;  
-//    }
-//    else
-//    {
   if(mmolsunits)
-    {
-      snprintf(outputtext, sizeof(outputtext), "You are adding 'BG result: %d.%d %s'  to Care Portal.", integerpart_bg, fractionalpart_bg, unitsused);
-      snprintf(bgresult, sizeof(bgresult), "%d.%d", integerpart_bg,fractionalpart_bg );
-    }
-    else
-    {
-      snprintf(outputtext, sizeof(outputtext), "You are adding 'BG result: %d %s'  to Care Portal.", integerpart_bg,unitsused);
-      snprintf(bgresult, sizeof(bgresult), "%d", integerpart_bg);
-    }
-  
-    snprintf(eventtype,sizeof(eventtype), "BG Check");
-    create_populate_window();
-//      bIntegerPart_bg_set = false;
-//    }
+  {
+    snprintf(outputtext, sizeof(outputtext), "You are adding 'BG result: %d.%d %s'  to Care Portal.", integerpart_bg, fractionalpart_bg, unitsused);
+    snprintf(bgresult, sizeof(bgresult), "%d.%d", integerpart_bg,fractionalpart_bg );
+  }
+  else
+  {
+    snprintf(outputtext, sizeof(outputtext), "You are adding 'BG result: %d %s'  to Care Portal.", integerpart_bg,unitsused);
+    snprintf(bgresult, sizeof(bgresult), "%d", integerpart_bg);
+  }
+  snprintf(eventtype,sizeof(eventtype), "BG Check");
+  create_populate_window();
 }
 
 static void up_click_handler_bg(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
 	  Set_GraphText_layer_bg(graph_text_layer_bg, 1);
-	  // Set_GraphText_layer_bg(graph_text_layer_bg,bIntegerPart_bg_set, 1);
-    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
+    // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
 }
-
 
 static void down_click_handler_bg(ClickRecognizerRef recognizer, void *context) {
-   
     Set_GraphText_layer_bg(graph_text_layer_bg, -1);
-    //Set_GraphText_layer_bg(graph_text_layer_bg,bIntegerPart_bg_set, -1);
-    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
+    // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
 }
 
-/*
-// eliminated the long clicks and replaced with repeaters 
-
-void select_long_click_up_handler_bg(ClickRecognizerRef recognizer, void *context) {
-   
-    Set_GraphText_layer_bg(graph_text_layer_bg,bIntegerPart_bg_set, 10);
-    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_up_handler_bg: Exiting###");
-}
-
-void select_long_click_down_handler_bg(ClickRecognizerRef recognizer, void *context) {
-   
-    Set_GraphText_layer_bg(graph_text_layer_bg,bIntegerPart_bg_set, -10);
-  
-    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_long_click_down_handler_bg: Exiting###");
-}
-*/ 
 static void click_config_provider_bg(void *context) {
   // Register the ClickHandlers
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_bg);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_bg);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_bg);
-
   // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
-  // you can also get rid of the select_long_click handlers for click and release for up and down
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_bg);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_bg);
-  // window_long_click_subscribe(BUTTON_ID_UP, 700, select_long_click_up_handler_bg, select_long_click_release_handler);
-  // window_long_click_subscribe(BUTTON_ID_DOWN, 700, select_long_click_down_handler_bg, select_long_click_release_handler);
 }
 void bg_load_graph(Window *window) {
   
@@ -967,6 +876,7 @@ void bg_unload_graph(Window *window) {
    window_destroy(bg_window);
 }
 ////////////end of bg mmol window///////////////
+
 ///////////////////////////// MAIN WINDOW /////////////////////////////////
 static void menu_select_callback(int index, void *ctx) {
   

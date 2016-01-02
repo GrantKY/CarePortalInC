@@ -12,7 +12,7 @@
         "SUCCESS": 10
     },
     "capabilities": [
-        ""
+        "configurable"
     ],
     "companyName": "Pebble Technology",
     "longName": "Care Portal in C",
