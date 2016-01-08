@@ -998,6 +998,7 @@ static void init()
       .unload = main_window_unload,
     });
   
+  
   // Registering callbacks
     app_message_register_inbox_received(inbox_received_callback);
     app_message_register_inbox_dropped(inbox_dropped_callback);

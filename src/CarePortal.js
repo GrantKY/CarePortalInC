@@ -3,19 +3,23 @@
 // adding configuration screen for the units, secret key, web URL and Pebble name
 Pebble.addEventListener("showConfiguration", function(e) {
                         console.log("Showing Configuration", JSON.stringify(e));
-                        Pebble.openURL('http://longlandm.github.io/careportalpebble/config_1.html');
+  Pebble.openURL('http://cgminthecloud.github.io/Pebble-Careportal/config_1.html');
                         });
 
 Pebble.addEventListener("webviewclosed", function(e) {
                         var opts = JSON.parse(decodeURIComponent(e.response));
                         console.log("CLOSE CONFIG OPTIONS = " + JSON.stringify(opts));
                         // store configuration in local storage
-                        localStorage.setItem('portalPebble', JSON.stringify(opts));                      
+                        localStorage.setItem('portalPebble', JSON.stringify(opts));    
+                        Pebble.sendAppMessage({ BG_UNITS: opts.units});
                         });
 
 Pebble.addEventListener('ready',
   function(e) {
     console.log('JavaScript app ready and running!');
+    var opts = [ ].slice.call(arguments).pop( );
+    opts = JSON.parse(localStorage.getItem('portalPebble'));  
+    Pebble.sendAppMessage({ BG_UNITS: opts.units});
   }
 );
 
@@ -31,6 +35,7 @@ Pebble.addEventListener('appmessage',
     var opts = [ ].slice.call(arguments).pop( );
     opts = JSON.parse(localStorage.getItem('portalPebble'));
 
+    console.log(opts);
 	  // check if endpoint exists
     if (!opts.endpoint) {
         // endpoint doesn't exist, return no endpoint to watch
