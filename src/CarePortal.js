@@ -31,6 +31,7 @@ Pebble.addEventListener('appmessage',
     var opts = [ ].slice.call(arguments).pop( );
     opts = JSON.parse(localStorage.getItem('portalPebble'));
 
+    console.log(opts);
 	  // check if endpoint exists
     if (!opts.endpoint) {
         // endpoint doesn't exist, return no endpoint to watch
@@ -73,7 +74,7 @@ function AddBGData(contents, currentglucose, bg_units)
   if(isNumber(currentglucose))
   {
     contents.glucose = parseFloat(currentglucose);
-    contents.units = bg_units;
+    contents.bg_units = bg_units;
     contents.glucoseType = "Finger"; 
   }
   
