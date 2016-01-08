@@ -3,7 +3,7 @@
 // adding configuration screen for the units, secret key, web URL and Pebble name
 Pebble.addEventListener("showConfiguration", function(e) {
                         console.log("Showing Configuration", JSON.stringify(e));
-                        Pebble.openURL('http://longlandm.github.io/careportalpebble/config_1a.html');
+  Pebble.openURL('http://cgminthecloud.github.io/Pebble-Careportal/config_1.html');
                         });
 
 Pebble.addEventListener("webviewclosed", function(e) {
