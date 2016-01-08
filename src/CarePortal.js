@@ -10,7 +10,8 @@ Pebble.addEventListener("webviewclosed", function(e) {
                         var opts = JSON.parse(decodeURIComponent(e.response));
                         console.log("CLOSE CONFIG OPTIONS = " + JSON.stringify(opts));
                         // store configuration in local storage
-                        localStorage.setItem('portalPebble', JSON.stringify(opts));                      
+                        localStorage.setItem('portalPebble', JSON.stringify(opts));    
+                        Pebble.sendAppMessage({ BG_UNITS: opts.units});
                         });
 
 Pebble.addEventListener('ready',
@@ -74,7 +75,7 @@ function AddBGData(contents, currentglucose, bg_units)
   if(isNumber(currentglucose))
   {
     contents.glucose = parseFloat(currentglucose);
-    contents.bg_units = bg_units;
+    contents.units = bg_units;
     contents.glucoseType = "Finger"; 
   }
   
