@@ -98,7 +98,7 @@ void uploadresult_load_window(Window * window)
   #ifdef PBL_ROUND
       graph_text_layer_uploadresult = text_layer_create(GRect(0, 60, 180, 144));
   #else
-    graph_text_layer_uploadresult = text_layer_create(GRect(0, 0, 144, 144));
+    graph_text_layer_uploadresult = text_layer_create(GRect(0, 20, 144, 144));
   #endif
     text_layer_set_text_color(graph_text_layer_uploadresult, COL_DARK);
     text_layer_set_background_color(graph_text_layer_uploadresult, COL_LIGHT);
@@ -440,7 +440,7 @@ void populate_load_window(Window * window)
   #ifdef PBL_ROUND
     graph_text_layer_populate = text_layer_create(GRect(0, 60, 180, 144));
   #else
-    graph_text_layer_populate = text_layer_create(GRect(0, 0, 144, 144));
+    graph_text_layer_populate = text_layer_create(GRect(0, 20, 144, 144));
   #endif
     text_layer_set_text(graph_text_layer_populate, outputtext);
     text_layer_set_text_color(graph_text_layer_populate, COL_DARK);
@@ -574,9 +574,9 @@ void carbs_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(carbs_window);
  #ifdef PBL_ROUND
-  graph_text_layer_carbs = text_layer_create(GRect(0, 60, 180, 37));
+  graph_text_layer_carbs = text_layer_create(GRect(0, 75, 180, 37));
  #else
- graph_text_layer_carbs = text_layer_create(GRect(0, 0, 144, 37));
+ graph_text_layer_carbs = text_layer_create(GRect(0, 20, 144, 37));
 #endif
   text_layer_set_text_color(graph_text_layer_carbs, COL_DARK);
   text_layer_set_text(graph_text_layer_carbs, "Carbs: 0 g");
@@ -604,11 +604,12 @@ void insulin_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(insulin_window);
  #ifdef PBL_ROUND
-  graph_text_layer_insulin = text_layer_create(GRect(0, 60, 180, 27));
+  graph_text_layer_insulin = text_layer_create(GRect(0, 75, 180, 27));
 #else
-  graph_text_layer_insulin = text_layer_create(GRect(0, 0, 144, 27));
+  graph_text_layer_insulin = text_layer_create(GRect(0, 20, 144, 27));
 #endif  
   text_layer_set_text(graph_text_layer_insulin, "Insulin: 0.00 units");
+  text_layer_set_text_color(graph_text_layer_insulin, COL_DARK);
   text_layer_set_background_color(graph_text_layer_insulin, COL_LIGHT);
   text_layer_set_font(graph_text_layer_insulin, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(graph_text_layer_insulin, GTextAlignmentCenter);
@@ -675,10 +676,11 @@ void pumpsitechange_load_graph(Window *window) {
 #ifdef PBL_ROUND
   graph_text_layer_pumpsitechange = text_layer_create(GRect(0, 60, 180, 170));
 #else
-  graph_text_layer_pumpsitechange = text_layer_create(GRect(0, 0, 144, 170));
+  graph_text_layer_pumpsitechange = text_layer_create(GRect(0, 20, 144, 170));
 #endif
  
   Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, INITIAL);
+  text_layer_set_text_color(graph_text_layer_pumpsitechange, COL_DARK);
   text_layer_set_background_color(graph_text_layer_pumpsitechange, COL_LIGHT);
   text_layer_set_font(graph_text_layer_pumpsitechange, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(graph_text_layer_pumpsitechange, GTextAlignmentCenter);
@@ -780,7 +782,7 @@ void tempbasal_load_graph(Window *window) {
 #ifdef PBL_ROUND
   graph_text_layer_TempBasal = text_layer_create(GRect(0, 60, 180, 170));
 #else
-  graph_text_layer_TempBasal = text_layer_create(GRect(0, 0, 144, 170));
+  graph_text_layer_TempBasal = text_layer_create(GRect(0, 20, 144, 170));
 #endif
   Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, INITIAL);
   
@@ -866,9 +868,9 @@ void bg_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(bg_window);
 #ifdef PBL_ROUND
-  graph_text_layer_bg = text_layer_create(GRect(0, 60, 180, 27));
+  graph_text_layer_bg = text_layer_create(GRect(0, 75, 180, 27));
 #else
-  graph_text_layer_bg = text_layer_create(GRect(0, 0, 144, 27));
+  graph_text_layer_bg = text_layer_create(GRect(0, 20, 144, 27));
 #endif
   if(mmolsunits)
   {
@@ -996,7 +998,7 @@ static void main_window_load(Window *window) {
 
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_frame(window_layer);
-
+  
   s_simple_menu_layer = simple_menu_layer_create(bounds, window, s_menu_sections, NUM_MENU_SECTIONS, NULL);
 
   layer_add_child(window_layer, simple_menu_layer_get_layer(s_simple_menu_layer));
