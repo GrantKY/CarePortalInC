@@ -17,6 +17,8 @@
 #define GLUCOSE 13
 #define  BG_UNITS 14
 
+#define COL_DARK PBL_IF_COLOR_ELSE(GColorOxfordBlue, GColorBlack)
+#define COL_LIGHT PBL_IF_COLOR_ELSE(GColorWhite, GColorWhite)
 
 #define UP 1
 #define DOWN -1
@@ -93,10 +95,14 @@ void uploadresult_load_window(Window * window)
     Layer *window_layer_graph = NULL;
     
     window_layer_graph = window_get_root_layer(uploadresult_window);
-    graph_text_layer_uploadresult = text_layer_create(GRect(0, 0, 144, 144));
+  #ifdef PBL_ROUND
+      graph_text_layer_uploadresult = text_layer_create(GRect(0, 60, 180, 144));
+  #else
+    graph_text_layer_uploadresult = text_layer_create(GRect(0, 20, 144, 144));
+  #endif
+    text_layer_set_text_color(graph_text_layer_uploadresult, COL_DARK);
+    text_layer_set_background_color(graph_text_layer_uploadresult, COL_LIGHT);
     text_layer_set_text(graph_text_layer_uploadresult, messageresultwindow);
-    text_layer_set_text_color(graph_text_layer_uploadresult, GColorBlack);
-    text_layer_set_background_color(graph_text_layer_uploadresult, GColorWhite);
     text_layer_set_font(graph_text_layer_uploadresult, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
     text_layer_set_text_alignment(graph_text_layer_uploadresult, GTextAlignmentCenter);
     layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_uploadresult));
@@ -431,10 +437,14 @@ void populate_load_window(Window * window)
     Layer *window_layer_graph = NULL;
     
     window_layer_graph = window_get_root_layer(populate_window);
-    graph_text_layer_populate = text_layer_create(GRect(0, 0, 144, 144));
+  #ifdef PBL_ROUND
+    graph_text_layer_populate = text_layer_create(GRect(0, 60, 180, 144));
+  #else
+    graph_text_layer_populate = text_layer_create(GRect(0, 20, 144, 144));
+  #endif
     text_layer_set_text(graph_text_layer_populate, outputtext);
-    text_layer_set_text_color(graph_text_layer_populate, GColorBlack);
-    text_layer_set_background_color(graph_text_layer_populate, GColorWhite);
+    text_layer_set_text_color(graph_text_layer_populate, COL_DARK);
+    text_layer_set_background_color(graph_text_layer_populate, COL_LIGHT);
     text_layer_set_font(graph_text_layer_populate, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
     text_layer_set_text_alignment(graph_text_layer_populate, GTextAlignmentCenter);
     layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_populate));
@@ -563,11 +573,14 @@ void carbs_load_graph(Window *window) {
   Layer *window_layer_graph = NULL;
   
   window_layer_graph = window_get_root_layer(carbs_window);
- 
-  graph_text_layer_carbs = text_layer_create(GRect(0, 0, 144, 27));
+ #ifdef PBL_ROUND
+  graph_text_layer_carbs = text_layer_create(GRect(0, 75, 180, 37));
+ #else
+ graph_text_layer_carbs = text_layer_create(GRect(0, 20, 144, 37));
+#endif
+  text_layer_set_text_color(graph_text_layer_carbs, COL_DARK);
   text_layer_set_text(graph_text_layer_carbs, "Carbs: 0 g");
-  text_layer_set_text_color(graph_text_layer_carbs, GColorBlack);
-  text_layer_set_background_color(graph_text_layer_carbs, GColorWhite);
+  text_layer_set_background_color(graph_text_layer_carbs, COL_LIGHT);
   text_layer_set_font(graph_text_layer_carbs, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(graph_text_layer_carbs, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_carbs));
@@ -590,11 +603,14 @@ void insulin_load_graph(Window *window) {
   Layer *window_layer_graph = NULL;
   
   window_layer_graph = window_get_root_layer(insulin_window);
-
-  graph_text_layer_insulin = text_layer_create(GRect(0, 0, 144, 27));
+ #ifdef PBL_ROUND
+  graph_text_layer_insulin = text_layer_create(GRect(0, 75, 180, 27));
+#else
+  graph_text_layer_insulin = text_layer_create(GRect(0, 20, 144, 27));
+#endif  
   text_layer_set_text(graph_text_layer_insulin, "Insulin: 0.00 units");
-  text_layer_set_text_color(graph_text_layer_insulin, GColorBlack);
-  text_layer_set_background_color(graph_text_layer_insulin, GColorWhite);
+  text_layer_set_text_color(graph_text_layer_insulin, COL_DARK);
+  text_layer_set_background_color(graph_text_layer_insulin, COL_LIGHT);
   text_layer_set_font(graph_text_layer_insulin, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(graph_text_layer_insulin, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_insulin));
@@ -657,12 +673,15 @@ void pumpsitechange_load_graph(Window *window) {
   Layer *window_layer_graph = NULL;
   
   window_layer_graph = window_get_root_layer(pumpsitechange_window);
-
-  graph_text_layer_pumpsitechange = text_layer_create(GRect(0, 0, 144, 170));
+#ifdef PBL_ROUND
+  graph_text_layer_pumpsitechange = text_layer_create(GRect(0, 60, 180, 170));
+#else
+  graph_text_layer_pumpsitechange = text_layer_create(GRect(0, 20, 144, 170));
+#endif
  
   Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, INITIAL);
-  text_layer_set_text_color(graph_text_layer_pumpsitechange, GColorBlack);
-  text_layer_set_background_color(graph_text_layer_pumpsitechange, GColorWhite);
+  text_layer_set_text_color(graph_text_layer_pumpsitechange, COL_DARK);
+  text_layer_set_background_color(graph_text_layer_pumpsitechange, COL_LIGHT);
   text_layer_set_font(graph_text_layer_pumpsitechange, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(graph_text_layer_pumpsitechange, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_pumpsitechange));
@@ -704,7 +723,7 @@ void Set_GraphText_layer_TempBasal(TextLayer* currentlayer, int change)
 {
   static char s_packet_id_text[50];
  
-  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "TempBasal: %+d%% over %d minutes", iTempBasalPercentage, iTempBasalMinutes);
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "TempBasal: %+d%% \n over %d minutes", iTempBasalPercentage, iTempBasalMinutes);
 
   text_layer_set_text(currentlayer, s_packet_id_text);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_TempBasal: Exiting###");
@@ -760,13 +779,15 @@ void tempbasal_load_graph(Window *window) {
   Layer *window_layer_graph = NULL;
   
   window_layer_graph = window_get_root_layer(tempbasal_window);
-
-  graph_text_layer_TempBasal = text_layer_create(GRect(0, 0, 144, 170));
- 
+#ifdef PBL_ROUND
+  graph_text_layer_TempBasal = text_layer_create(GRect(0, 60, 180, 170));
+#else
+  graph_text_layer_TempBasal = text_layer_create(GRect(0, 20, 144, 170));
+#endif
   Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, INITIAL);
   
-  text_layer_set_text_color(graph_text_layer_TempBasal, GColorBlack);
-  text_layer_set_background_color(graph_text_layer_TempBasal, GColorWhite);
+  text_layer_set_text_color(graph_text_layer_TempBasal, COL_DARK);
+  text_layer_set_background_color(graph_text_layer_TempBasal, COL_LIGHT);
   text_layer_set_font(graph_text_layer_TempBasal, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(graph_text_layer_TempBasal, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_TempBasal));
@@ -846,9 +867,11 @@ void bg_load_graph(Window *window) {
   Layer *window_layer_graph = NULL;
   
   window_layer_graph = window_get_root_layer(bg_window);
-
-  graph_text_layer_bg = text_layer_create(GRect(0, 0, 144, 27));
-
+#ifdef PBL_ROUND
+  graph_text_layer_bg = text_layer_create(GRect(0, 75, 180, 27));
+#else
+  graph_text_layer_bg = text_layer_create(GRect(0, 20, 144, 27));
+#endif
   if(mmolsunits)
   {
      snprintf(outputtext, sizeof(outputtext), "BG: %d.%d %s", integerpart_bg, fractionalpart_bg, unitsused);
@@ -859,8 +882,8 @@ void bg_load_graph(Window *window) {
   }
 
   text_layer_set_text(graph_text_layer_bg, outputtext);
-  text_layer_set_text_color(graph_text_layer_bg, GColorBlack);
-  text_layer_set_background_color(graph_text_layer_bg, GColorWhite);
+  text_layer_set_text_color(graph_text_layer_bg, COL_DARK);
+  text_layer_set_background_color(graph_text_layer_bg, COL_LIGHT);
   text_layer_set_font(graph_text_layer_bg, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(graph_text_layer_bg, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_bg));
@@ -975,7 +998,7 @@ static void main_window_load(Window *window) {
 
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_frame(window_layer);
-
+  
   s_simple_menu_layer = simple_menu_layer_create(bounds, window, s_menu_sections, NUM_MENU_SECTIONS, NULL);
 
   layer_add_child(window_layer, simple_menu_layer_get_layer(s_simple_menu_layer));

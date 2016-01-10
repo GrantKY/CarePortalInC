@@ -14,17 +14,21 @@
     "capabilities": [
         "configurable"
     ],
-    "companyName": "Pebble Technology",
-    "longName": "Care Portal in C",
+    "companyName": "Dexterity",
+    "longName": "Care Portal",
     "projectType": "native",
     "resources": {
         "media": []
     },
-    "sdkVersion": "2",
+    "sdkVersion": "3",
     "shortName": "Care Portal",
+    "targetPlatforms": [
+        "aplite",
+        "basalt",
+        "chalk"
+    ],
     "uuid": "620f2467-c17e-4350-b337-df856e89a134",
-    "versionCode": 1,
-    "versionLabel": "5.0",
+    "versionLabel": "5.2",
     "watchapp": {
         "watchface": false
     }
