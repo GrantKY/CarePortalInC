@@ -1,9 +1,13 @@
 #include "pebble.h"
 #include "stddef.h"
 #include "string.h"
+#include "pebble_process_info.h"
+extern const PebbleProcessInfo __pbl_app_info;
+char version[20];
+
 //https://github.com/pebble-examples/feature-simple-menu-layer
 #define NUM_MENU_SECTIONS 2
-#define NUM_FIRST_MENU_ITEMS 5
+#define NUM_FIRST_MENU_ITEMS 6
 #define NUM_SECOND_MENU_ITEMS 1
 
 #define KEY_DATA 5
@@ -16,6 +20,11 @@
 #define PERCENT 12
 #define GLUCOSE 13
 #define  BG_UNITS 14
+
+#define MMOL_INTEGER_DEFAULT 5
+#define MMOL_FRACTIONAL_DEFAULT 6
+#define MGDL_DEFAULT 150
+#define CARBS_DEFAULT 20
 
 #define COL_DARK PBL_IF_COLOR_ELSE(GColorOxfordBlue, GColorBlack)
 #define COL_LIGHT PBL_IF_COLOR_ELSE(GColorWhite, GColorWhite)
@@ -168,13 +177,13 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
            if(strstr(unitsused, mmol)!= NULL )
            {
              mmolsunits = true;
-             integerpart_bg = 5;
-             fractionalpart_bg = 5;
+             integerpart_bg = MMOL_INTEGER_DEFAULT;
+             fractionalpart_bg = MMOL_FRACTIONAL_DEFAULT;
            } 
            else
            {
              mmolsunits = false;
-             integerpart_bg = 100;
+             integerpart_bg = MGDL_DEFAULT;
            }
         }
         break;
@@ -357,12 +366,12 @@ void ResetToDefaults()
   // set both mmol and mg/dl defaults
   if(mmolsunits)
   {  
-    integerpart_bg = 5;
-    fractionalpart_bg = 6;  
+    integerpart_bg = MMOL_INTEGER_DEFAULT;
+    fractionalpart_bg = MMOL_FRACTIONAL_DEFAULT;  
   }
   else
   {
-    integerpart_bg = 100;
+    integerpart_bg = MGDL_DEFAULT;
   }
 }
 
@@ -990,6 +999,12 @@ static void main_window_load(Window *window) {
     .callback = menu_select_callback,
   };
  
+  snprintf(version, sizeof(version), "Version %d.%d", __pbl_app_info.process_version.major, __pbl_app_info.process_version.minor);
+ 
+  
+   s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+    .title = version,
+  };
   
   s_menu_sections[0] = (SimpleMenuSection) {
     .num_items = NUM_FIRST_MENU_ITEMS,
