@@ -11,7 +11,14 @@ Pebble.addEventListener("webviewclosed", function(e) {
                         console.log("CLOSE CONFIG OPTIONS = " + JSON.stringify(opts));
                         // store configuration in local storage
                         localStorage.setItem('portalPebble', JSON.stringify(opts));    
-                        Pebble.sendAppMessage({ BG_UNITS: opts.units});
+                        var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units},
+                                            function(e) {
+                                                         console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
+                                                         },
+                                             function(e) {
+                                                         console.log('Unable to deliver message with transactionId='+ e.data.transactionId + ' Error is: ' + e.error.message);
+                                            });
+                        console.log("transactionid: " + transactionid);
                         });
 
 Pebble.addEventListener('ready',
@@ -19,7 +26,14 @@ Pebble.addEventListener('ready',
     console.log('JavaScript app ready and running!');
     var opts = [ ].slice.call(arguments).pop( );
     opts = JSON.parse(localStorage.getItem('portalPebble'));  
-    Pebble.sendAppMessage({ BG_UNITS: opts.units});
+    var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units},
+          function(e) {
+                        console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
+                      },
+          function(e) {
+                        console.log('Unable to deliver message with transactionId='+ e.data.transactionId + ' Error is: ' + e.error.message);
+                      });
+    console.log("transactionid: " + transactionid);
   }
 );
 
