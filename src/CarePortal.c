@@ -1045,8 +1045,8 @@ static void init()
     s_main_window = window_create();
   
     // Open AppMessage
-    app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
-  
+   // app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
+    app_message_open(300, 300);
     window_set_window_handlers(s_main_window, (WindowHandlers) {
       .load = main_window_load,
       .unload = main_window_unload,
