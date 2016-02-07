@@ -41,7 +41,7 @@ static Window *pumpsitechange_window = NULL;
 static Window *tempbasal_window = NULL;
 static Window *uploadresult_window = NULL;
 static Window *bg_window = NULL;
-static Window *combo_bolus = NULL;
+static Window *combobolus_window = NULL;
 
 static SimpleMenuLayer *s_simple_menu_layer;
 static SimpleMenuSection s_menu_sections[NUM_MENU_SECTIONS];
@@ -53,7 +53,7 @@ TextLayer *graph_text_layer_pumpsitechange = NULL;
 TextLayer *graph_text_layer_TempBasal = NULL;
 TextLayer *graph_text_layer_uploadresult = NULL;
 TextLayer *graph_text_layer_bg = NULL;
-
+TextLayer *graph_text_layer_combobolus = NULL;
 char messageresultwindow[100];
 
 char outputtext[150];
@@ -90,6 +90,14 @@ bool mmolsunits = true;
 // bool bIntegerPart_bg_set = false; - not needed anymore since we're setting from the decimal in mmol
 
 static GBitmap *s_menu_icon_image;
+
+
+// Combo Bolis
+int combo_bolus_insulin_integerpart = 0;
+int combo_bolus_insulin_fractionalpart = 0;
+int combo_bolus_combo_per = 100;
+int combo_bolus_minutes = 0;
+int combo_bolus_currentstep = 0; //0 - integer part, 1 - fractional part, 2 - combo bolus percentage, 3 - minutes.
 
 /////////////////////////////////////// ERROR HANDLING ///////////////
 
@@ -374,6 +382,14 @@ void ResetToDefaults()
   {
     integerpart_bg = MGDL_DEFAULT;
   }
+
+  // Combo Bolus
+  combo_bolus_insulin_integerpart = 0;
+  combo_bolus_insulin_fractionalpart = 0;
+  combo_bolus_combo_per = 100;
+  combo_bolus_minutes = 0;
+  combo_bolus_currentstep = 0; 
+
 }
 
 //////////////////////// POPULATE WINDOW ///////////////////////////////////////
@@ -505,7 +521,7 @@ static void select_click_handler_insulin(ClickRecognizerRef recognizer, void *co
     }
     else
     {
-      snprintf(outputtext, 100, "You are adding 'Insulin: %d.%s units'  to Care Portal.", integerpart, GetFractionaPartAsChar());
+      snprintf(outputtext, sizeof(outputtext), "You are adding 'Insulin: %d.%s units'  to Care Portal.", integerpart, GetFractionaPartAsChar());
 
       snprintf(keyname, sizeof(keyname), "insulin");
       snprintf(resultvalue, sizeof(resultvalue), "%d.%s", integerpart, GetFractionaPartAsChar());
@@ -656,7 +672,7 @@ static void up_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void 
 static void select_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void *context) {
     char * sitechange = GetPumpSiteChangeLocation(INITIAL);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_pumpsitechange - Pump Site Location: %s", sitechange);
-    snprintf(outputtext, 100, "You are adding 'Pump Site Location: %s'  to Care Portal.", sitechange);
+    snprintf(outputtext, sizeof(outputtext), "You are adding 'Pump Site Location: %s'  to Care Portal.", sitechange);
     snprintf(keyname, sizeof(keyname), "notes");
     snprintf(resultvalue, sizeof(resultvalue), "%s", sitechange);
     snprintf(eventtype,sizeof(eventtype), "Site Change");
@@ -853,12 +869,12 @@ static void select_click_handler_bg(ClickRecognizerRef recognizer, void *context
 }
 
 static void up_click_handler_bg(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
-	  Set_GraphText_layer_bg(graph_text_layer_bg, 1);
+	  Set_GraphText_layer_bg(graph_text_layer_bg, UP);
     // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
 }
 
 static void down_click_handler_bg(ClickRecognizerRef recognizer, void *context) {
-    Set_GraphText_layer_bg(graph_text_layer_bg, -1);
+    Set_GraphText_layer_bg(graph_text_layer_bg, DOWN);
     // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
 }
 
@@ -909,6 +925,192 @@ void bg_unload_graph(Window *window) {
    window_destroy(bg_window);
 }
 ////////////end of bg mmol window///////////////
+
+/////////// COMBO BOLUS WINDOW///////////////
+void UpdateComboBolusDetails(int change)
+{
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails: %d", combo_bolus_currentstep);
+    if(combo_bolus_currentstep == 0)
+    {
+        app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_insulin_integerpart: %d", combo_bolus_insulin_integerpart);
+        combo_bolus_insulin_integerpart += change;
+    }
+    else if(combo_bolus_currentstep == 1)
+    {
+        app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_insulin_combo_bolus_insulin_fractionalintegerpart: %d", combo_bolus_insulin_fractionalpart);
+        combo_bolus_insulin_fractionalpart += change;
+    }
+    else if(combo_bolus_currentstep == 2)
+    {
+        int increment = 5;
+        if(combo_bolus_combo_per != 100 && combo_bolus_combo_per != 0)
+        {
+            if(change == UP)
+            {
+                combo_bolus_combo_per += increment;
+            }
+            else if(change == DOWN)
+            {
+                combo_bolus_combo_per -= increment;
+            }
+
+        }
+        else if(combo_bolus_combo_per == 100)
+        {
+            if(change == DOWN)
+            {
+                combo_bolus_combo_per -= increment;
+            }
+            else
+            {
+                app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_combo_per > 100 not allowed");
+            }
+        }
+        else if(combo_bolus_combo_per == 0)
+        {
+            if(change == UP)
+            {
+                 combo_bolus_combo_per += increment;
+            }
+            else
+            {
+                app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_combo_per < 0 not allowed");
+
+            }
+        }
+        
+
+    }
+   else if(combo_bolus_currentstep == 3)
+    {
+        int timestepincrement = 10;
+        if(combo_bolus_minutes != 0 )
+        {
+            if(change == UP)
+            {
+                combo_bolus_minutes += timestepincrement;
+            }
+            else if(change == DOWN)
+            {
+                combo_bolus_minutes -= timestepincrement;
+            }
+
+        }
+        else if(combo_bolus_minutes == 0)
+        {
+            if(change == UP)
+            {
+                combo_bolus_minutes += timestepincrement;
+            }
+            else if(change == DOWN)
+            {
+               app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_minutes < 0 not allowed");
+            }
+        }
+
+        
+    }
+}
+
+
+
+
+void Set_GraphText_layer_combobolus(TextLayer* currentlayer, int change)
+{
+  static char s_packet_id_text[60];
+  UpdateComboBolusDetails(change);
+  //char * sitechange = GetPumpSiteChangeLocation(change);
+  
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%d units.\nCombo bolus %d/%d\n over\n %d minutes",
+            combo_bolus_insulin_integerpart, combo_bolus_insulin_fractionalpart, combo_bolus_combo_per, 100 - combo_bolus_combo_per,combo_bolus_minutes );
+ // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "Pump Site Location: %s", sitechange);
+  text_layer_set_text(currentlayer, s_packet_id_text);
+}
+
+static void up_click_handler_combobolus(ClickRecognizerRef recognizer, void *context) {
+    Set_GraphText_layer_combobolus(graph_text_layer_combobolus, UP);
+	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_combobolus: Exiting###");
+}
+
+static void select_click_handler_combobolus(ClickRecognizerRef recognizer, void *context) {
+   //char * sitechange = GetPumpSiteChangeLocation(INITIAL);
+
+    if(combo_bolus_currentstep < 5)
+    {
+        combo_bolus_currentstep += 1;
+    }
+    else
+    {
+        app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_combobolus");
+        snprintf(outputtext, sizeof(outputtext), "Insulin: %d.%d units.\nCombo bolus %d/%d\n over\n %d minutes",
+                combo_bolus_insulin_integerpart, combo_bolus_insulin_fractionalpart, combo_bolus_combo_per, 100 - combo_bolus_combo_per,combo_bolus_minutes );
+
+        create_populate_window();
+        combo_bolus_currentstep = 0;
+
+         // snprintf(outputtext, sizeof(outputtext), "You are adding 'Insulin: 3.4 units. Combo bolus 70/30 over 120 minutes'  to Care Portal.");
+    //snprintf(keyname, sizeof(keyname), "notes");
+    //snprintf(resultvalue, sizeof(resultvalue), "%s", sitechange);
+    //snprintf(eventtype,sizeof(eventtype), "Site Change");
+//    combo_bolus_currentstep += 1;
+    //create_populate_window();
+
+
+    }
+
+
+}
+
+static void down_click_handler_combobolus(ClickRecognizerRef recognizer, void *context) {
+  Set_GraphText_layer_combobolus(graph_text_layer_combobolus,DOWN);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_combobolus: Exiting###");
+}
+
+
+static void click_config_provider_combobolus(void *context) {
+  // Register the ClickHandlers
+  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_combobolus);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_combobolus);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_combobolus);
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_combobolus);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_combobolus);
+}
+
+void combobolus_load_graph(Window *window) {
+  
+  ResetToDefaults();
+  Layer *window_layer_graph = NULL;
+  
+  window_layer_graph = window_get_root_layer(combobolus_window);
+#ifdef PBL_ROUND
+  graph_text_layer_combobolus = text_layer_create(GRect(0, 60, 180, 170));
+#else
+  graph_text_layer_combobolus = text_layer_create(GRect(0, 20, 144, 170));
+#endif
+ 
+  Set_GraphText_layer_combobolus(graph_text_layer_combobolus, INITIAL);
+  text_layer_set_text_color(graph_text_layer_combobolus, COL_DARK);
+  text_layer_set_background_color(graph_text_layer_combobolus, COL_LIGHT);
+  text_layer_set_font(graph_text_layer_combobolus, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(graph_text_layer_combobolus, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_combobolus));
+  
+  window_set_click_config_provider(combobolus_window,(ClickConfigProvider)click_config_provider_combobolus);
+ 
+}
+
+void combobolus_unload_graph(Window *window) {
+   if(graph_text_layer_combobolus)
+   {
+     text_layer_destroy(graph_text_layer_combobolus);
+   }
+  
+   window_destroy(combobolus_window);
+}
+/////////////////////// END 
+
+
+////////////End of Combo Bolus Window///////////////
 
 ///////////////////////////// MAIN WINDOW /////////////////////////////////
 static void menu_select_callback(int index, void *ctx) {
@@ -973,7 +1175,19 @@ static void menu_select_callback(int index, void *ctx) {
     							  
     	  window_stack_push(pumpsitechange_window, true);
   }
- 
+  else if(index == 5)
+    {
+        combobolus_window = window_create();
+    	  window_set_window_handlers(combobolus_window, 
+    							   (WindowHandlers){
+    									                .load   = combobolus_load_graph,
+    								                  .unload = combobolus_unload_graph,
+                                     }
+    							   );  
+    							  
+    	  window_stack_push(combobolus_window, true);
+
+  }
 }
 
 static void main_window_load(Window *window) {
