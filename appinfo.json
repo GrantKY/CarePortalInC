@@ -15,6 +15,7 @@
         "configurable"
     ],
     "companyName": "Dexterity",
+    "enableMultiJS": false,
     "longName": "Care Portal",
     "projectType": "native",
     "resources": {

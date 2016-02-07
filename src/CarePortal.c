@@ -7,7 +7,7 @@ char version[20];
 
 //https://github.com/pebble-examples/feature-simple-menu-layer
 #define NUM_MENU_SECTIONS 2
-#define NUM_FIRST_MENU_ITEMS 6
+#define NUM_FIRST_MENU_ITEMS 7
 #define NUM_SECOND_MENU_ITEMS 1
 
 #define KEY_DATA 5
@@ -41,6 +41,7 @@ static Window *pumpsitechange_window = NULL;
 static Window *tempbasal_window = NULL;
 static Window *uploadresult_window = NULL;
 static Window *bg_window = NULL;
+static Window *combo_bolus = NULL;
 
 static SimpleMenuLayer *s_simple_menu_layer;
 static SimpleMenuSection s_menu_sections[NUM_MENU_SECTIONS];
@@ -996,6 +997,10 @@ static void main_window_load(Window *window) {
   };
    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
     .title = "Pump Site Change",
+    .callback = menu_select_callback,
+  };
+  s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+    .title = "Combo Bolus",
     .callback = menu_select_callback,
   };
  
