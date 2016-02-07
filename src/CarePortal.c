@@ -60,7 +60,7 @@ char outputtext[150];
 char fractionaText[10];
 
 char keyname[20];
-char resultvalue[40];
+char resultvalue[60];
 char eventtype[40];
 char duration[10];
 char percent[10];
@@ -1039,7 +1039,7 @@ void Set_GraphText_layer_combobolus(TextLayer* currentlayer, int change)
   UpdateComboBolusDetails(change);
   //char * sitechange = GetPumpSiteChangeLocation(change);
   
-  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units.\nCombo bolus %d/%d\n over\n %d minutes",
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units.\nCombo bolus\n %d%%/%d%%\n over\n %d minutes",
             combo_bolus_insulin_integerpart, GetFractionaPartAsChar(combo_bolus_insulin_fractionalpart), combo_bolus_combo_per, 100 - combo_bolus_combo_per,combo_bolus_minutes );
  // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "Pump Site Location: %s", sitechange);
   text_layer_set_text(currentlayer, s_packet_id_text);
@@ -1053,20 +1053,23 @@ static void up_click_handler_combobolus(ClickRecognizerRef recognizer, void *con
 static void select_click_handler_combobolus(ClickRecognizerRef recognizer, void *context) {
    //char * sitechange = GetPumpSiteChangeLocation(INITIAL);
 
-    if(combo_bolus_currentstep < 4)
+    if(combo_bolus_currentstep < 3)
     {
         combo_bolus_currentstep += 1;
     }
     else
     {
         app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_combobolus");
-        snprintf(outputtext, sizeof(outputtext), "You are adding Insulin: %d.%s units.\nCombo bolus %d/%d\n over\n %d minutes",
+        snprintf(outputtext, sizeof(outputtext), "You are adding Insulin: %d.%s units.\nCombo bolus\n %d%%/%d%%\n over\n %d minutes",
                 combo_bolus_insulin_integerpart, GetFractionaPartAsChar(combo_bolus_insulin_fractionalpart), combo_bolus_combo_per, 
                 100 - combo_bolus_combo_per,combo_bolus_minutes );
 
-        //snprintf(keyname, sizeof(keyname), "notes");
-       //snprintf(resultvalue, sizeof(resultvalue), "%s", sitechange);
-       //snprintf(eventtype,sizeof(eventtype), "Site Change");
+        snprintf(keyname, sizeof(keyname), "notes");
+        
+        snprintf(resultvalue, sizeof(resultvalue), "Insulin: %d.%s units.\nCombo bolus\n %d%%/%d%%\n over\n %d minutes",
+                combo_bolus_insulin_integerpart, GetFractionaPartAsChar(combo_bolus_insulin_fractionalpart), combo_bolus_combo_per, 
+                100 - combo_bolus_combo_per,combo_bolus_minutes );
+        snprintf(eventtype,sizeof(eventtype), "Note");
         create_populate_window();
         combo_bolus_currentstep = 0;
   }
