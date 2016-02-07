@@ -82,6 +82,7 @@ int iTempBasalMinutes = 0;
 int integerpart = 0;
 int fractionalpart = 0;
 bool bIntegerPart_set = false;  
+int insulin_increment = 5;
 
 // BG variables
 int integerpart_bg = 0;
@@ -246,15 +247,15 @@ int Set_FractionPart(int increment)
 }
 
 // function to return the 2 digit decimal as 2 characters if the decimal value is less than 2 digits  (.00, or .05)
-char* GetFractionaPartAsChar() 
+char* GetFractionaPartAsChar(int currentvalue) 
 {
-  if(fractionalpart<=5)
+  if(currentvalue<=5)
   {
-      snprintf(fractionaText, sizeof(fractionaText), "0%d", fractionalpart);
+      snprintf(fractionaText, sizeof(fractionaText), "0%d", currentvalue);
   }
   else
   {
-      snprintf(fractionaText, sizeof(fractionaText), "%d", fractionalpart);
+      snprintf(fractionaText, sizeof(fractionaText), "%d", currentvalue);
   }
   
   return fractionaText; 
@@ -272,11 +273,11 @@ void Set_Part(bool currentPartSet, int increment)
     {
       if(increment > 0)
       {
-         Set_FractionPart(5);
+         Set_FractionPart(insulin_increment);
       }
       else
       {  
-         Set_FractionPart(-5);
+         Set_FractionPart(-insulin_increment);
       }
     }
 }
@@ -510,7 +511,7 @@ void Set_GraphText_layer_Insulin(TextLayer* currentlayer, bool currentPartSet, i
   int temp_integerpart = integerpart;
   static char s_packet_id_text[30];
   
-  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units", temp_integerpart, GetFractionaPartAsChar());
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units", temp_integerpart, GetFractionaPartAsChar(fractionalpart));
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
 
@@ -521,10 +522,10 @@ static void select_click_handler_insulin(ClickRecognizerRef recognizer, void *co
     }
     else
     {
-      snprintf(outputtext, sizeof(outputtext), "You are adding 'Insulin: %d.%s units'  to Care Portal.", integerpart, GetFractionaPartAsChar());
+      snprintf(outputtext, sizeof(outputtext), "You are adding 'Insulin: %d.%s units'  to Care Portal.", integerpart, GetFractionaPartAsChar(fractionalpart));
 
       snprintf(keyname, sizeof(keyname), "insulin");
-      snprintf(resultvalue, sizeof(resultvalue), "%d.%s", integerpart, GetFractionaPartAsChar());
+      snprintf(resultvalue, sizeof(resultvalue), "%d.%s", integerpart, GetFractionaPartAsChar(fractionalpart));
       snprintf(eventtype,sizeof(eventtype), "Note");
       create_populate_window();
       bIntegerPart_set = false;
@@ -938,7 +939,24 @@ void UpdateComboBolusDetails(int change)
     else if(combo_bolus_currentstep == 1)
     {
         app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_insulin_combo_bolus_insulin_fractionalintegerpart: %d", combo_bolus_insulin_fractionalpart);
-        combo_bolus_insulin_fractionalpart += change;
+        
+        if(change == UP)
+        {
+            combo_bolus_insulin_fractionalpart += insulin_increment;
+        }
+        else
+        {
+            combo_bolus_insulin_fractionalpart -= insulin_increment;
+        }
+
+        if(combo_bolus_insulin_fractionalpart < 0)
+        {
+            combo_bolus_insulin_fractionalpart = 0;
+        }
+        else if(combo_bolus_insulin_fractionalpart >=100)
+        {
+            combo_bolus_insulin_fractionalpart = 0;
+        }
     }
     else if(combo_bolus_currentstep == 2)
     {
@@ -1021,8 +1039,8 @@ void Set_GraphText_layer_combobolus(TextLayer* currentlayer, int change)
   UpdateComboBolusDetails(change);
   //char * sitechange = GetPumpSiteChangeLocation(change);
   
-  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%d units.\nCombo bolus %d/%d\n over\n %d minutes",
-            combo_bolus_insulin_integerpart, combo_bolus_insulin_fractionalpart, combo_bolus_combo_per, 100 - combo_bolus_combo_per,combo_bolus_minutes );
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units.\nCombo bolus %d/%d\n over\n %d minutes",
+            combo_bolus_insulin_integerpart, GetFractionaPartAsChar(combo_bolus_insulin_fractionalpart), combo_bolus_combo_per, 100 - combo_bolus_combo_per,combo_bolus_minutes );
  // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "Pump Site Location: %s", sitechange);
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
@@ -1035,28 +1053,23 @@ static void up_click_handler_combobolus(ClickRecognizerRef recognizer, void *con
 static void select_click_handler_combobolus(ClickRecognizerRef recognizer, void *context) {
    //char * sitechange = GetPumpSiteChangeLocation(INITIAL);
 
-    if(combo_bolus_currentstep < 5)
+    if(combo_bolus_currentstep < 4)
     {
         combo_bolus_currentstep += 1;
     }
     else
     {
         app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_combobolus");
-        snprintf(outputtext, sizeof(outputtext), "Insulin: %d.%d units.\nCombo bolus %d/%d\n over\n %d minutes",
-                combo_bolus_insulin_integerpart, combo_bolus_insulin_fractionalpart, combo_bolus_combo_per, 100 - combo_bolus_combo_per,combo_bolus_minutes );
+        snprintf(outputtext, sizeof(outputtext), "You are adding Insulin: %d.%s units.\nCombo bolus %d/%d\n over\n %d minutes",
+                combo_bolus_insulin_integerpart, GetFractionaPartAsChar(combo_bolus_insulin_fractionalpart), combo_bolus_combo_per, 
+                100 - combo_bolus_combo_per,combo_bolus_minutes );
 
+        //snprintf(keyname, sizeof(keyname), "notes");
+       //snprintf(resultvalue, sizeof(resultvalue), "%s", sitechange);
+       //snprintf(eventtype,sizeof(eventtype), "Site Change");
         create_populate_window();
         combo_bolus_currentstep = 0;
-
-         // snprintf(outputtext, sizeof(outputtext), "You are adding 'Insulin: 3.4 units. Combo bolus 70/30 over 120 minutes'  to Care Portal.");
-    //snprintf(keyname, sizeof(keyname), "notes");
-    //snprintf(resultvalue, sizeof(resultvalue), "%s", sitechange);
-    //snprintf(eventtype,sizeof(eventtype), "Site Change");
-//    combo_bolus_currentstep += 1;
-    //create_populate_window();
-
-
-    }
+  }
 
 
 }
