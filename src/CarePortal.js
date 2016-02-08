@@ -99,6 +99,29 @@ function AddBGData(contents, currentglucose, bg_units)
   return contents;  
 }
 
+function AddComboBolous(contents, enteredinsulin, splitnow, splitext)
+{
+  
+  if(isNumber(enteredinsulin))
+  {
+     var upfrontinsulin = 0.0;
+     if(parseFloat(splitnow) !== 0)
+     {
+        console.log("splitnow" + splitnow);
+        upfrontinsulin = (parseFloat(splitnow) / 100) * parseFloat(enteredinsulin);   
+        
+     }
+    
+      contents.insulin = upfrontinsulin.toFixed(3);
+      contents.relative = (parseFloat(enteredinsulin) - upfrontinsulin).toFixed(3);
+      contents.enteredinsulin = enteredinsulin;
+      contents.splitNow = splitnow;
+      contents.splitExt = splitext; 
+  }
+  
+  return contents;  
+}
+
 
 function isNumber(obj)
 { 
@@ -114,6 +137,9 @@ function MongoDBContents(e, enteredBy, units)
     var duration = e.payload.DURATION;
     var percent = e.payload.PERCENT;
     var glucose = e.payload.GLUCOSE;
+    var insulin = e.payload.INSULIN;
+    var splitnow = e.payload.SPLITNOW;
+    var splitext = e.payload.SPLITEXT;
   
     var contents = {
       "enteredBy" : enteredBy,
@@ -122,11 +148,6 @@ function MongoDBContents(e, enteredBy, units)
   
     if (name !== undefined && name !== null)
     {
-//       if(isNumber(result))
-//       {
-//         contents[name.toLowerCase()] = parseFloat(result);
-//       }
-//       else
         contents[name.toLowerCase()] = result;
     }  
 
@@ -141,6 +162,13 @@ function MongoDBContents(e, enteredBy, units)
     {
       contents = AddBGData(contents, glucose, units);
     }
+    
+  // Combo Bolus
+  
+    if(splitnow !== undefined && splitnow !== null)
+    {
+         contents = AddComboBolous(contents, insulin, splitnow, splitext);
+    }
   
     return contents;
 }
@@ -149,9 +177,6 @@ function MongoDBContents(e, enteredBy, units)
 function PostTreatment(contents, endpoint, hashAPI) {
     var weburl = endpoint;
     var secret_key = hashAPI;
-  
-    // var weburl = GetWebURL();
-    // var secret_key = GetSecretKey();
 
     console.log('Posting Treatment log');
     console.log(JSON.stringify(contents));
