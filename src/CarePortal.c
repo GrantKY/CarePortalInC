@@ -392,6 +392,10 @@ void ResetToDefaults()
     }
 
     // Combo Bolus
+   	memset(splitnow, 0, sizeof(splitnow));
+	  memset(splitext, 0, sizeof(splitext));
+	  memset(enteredinsulin, 0, sizeof(enteredinsulin));
+    
     combo_bolus_insulin_integerpart = 0;
     combo_bolus_insulin_fractionalpart = 0;
     combo_bolus_combo_per = 100;
