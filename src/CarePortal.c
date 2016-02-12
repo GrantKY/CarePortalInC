@@ -530,7 +530,7 @@ void Set_GraphText_layer_Insulin(TextLayer* currentlayer, bool currentPartSet, i
   int temp_integerpart = integerpart;
   static char s_packet_id_text[30];
   
-  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units", temp_integerpart, GetFractionaPartAsChar());
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units", temp_integerpart, GetFractionaPartAsChar(fractionalpart));
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
 
