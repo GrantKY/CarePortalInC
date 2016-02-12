@@ -32,6 +32,9 @@ char version[20];
 #define UP 1
 #define DOWN -1
 #define INITIAL 0
+//add vibe
+
+
 
 static Window *s_main_window = NULL;
 static Window *carbs_window = NULL;
@@ -89,6 +92,14 @@ bool mmolsunits = true;
 // bool bIntegerPart_bg_set = false; - not needed anymore since we're setting from the decimal in mmol
 
 static GBitmap *s_menu_icon_image;
+
+// Vibrations
+void ShortVibe(){
+  vibes_double_pulse();
+};
+void LongVibe(){
+  vibes_long_pulse();
+};
 
 /////////////////////////////////////// ERROR HANDLING ///////////////
 
@@ -157,6 +168,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
              
             snprintf(messageresultwindow, sizeof(messageresultwindow), "Error uploading. Please check connection.");
             create_uploadresult_window();
+            //add vibe
+            LongVibe();
          }
          break;
         case SUCCESS:
@@ -165,6 +178,9 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
             APP_LOG(APP_LOG_LEVEL_INFO, "SUCCESSFUL: %s", new_tuple->value->cstring);
             snprintf(messageresultwindow, sizeof(messageresultwindow), "Success uploading to website.");
             create_uploadresult_window();
+            //add vibe
+            ShortVibe();
+
          }
          break;
          case BG_UNITS:
@@ -1029,8 +1045,8 @@ static void init()
     s_main_window = window_create();
   
     // Open AppMessage
-    app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
-  
+   // app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
+    app_message_open(300, 300);
     window_set_window_handlers(s_main_window, (WindowHandlers) {
       .load = main_window_load,
       .unload = main_window_unload,
