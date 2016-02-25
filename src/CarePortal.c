@@ -7,7 +7,7 @@ char version[20];
 
 //https://github.com/pebble-examples/feature-simple-menu-layer
 #define NUM_MENU_SECTIONS 2
-#define NUM_FIRST_MENU_ITEMS 9
+#define NUM_FIRST_MENU_ITEMS 10
 #define NUM_SECOND_MENU_ITEMS 1
 
 #define KEY_DATA 5
@@ -47,6 +47,7 @@ static Window *bg_window = NULL;
 static Window *combobolus_window = NULL;
 static Window *exercise_window = NULL;
 static Window *cgmsensor_window = NULL;
+static Window *insulinchange_window = NULL;
 
 static SimpleMenuLayer *s_simple_menu_layer;
 static SimpleMenuSection s_menu_sections[NUM_MENU_SECTIONS];
@@ -61,6 +62,7 @@ TextLayer *graph_text_layer_bg = NULL;
 TextLayer *graph_text_layer_combobolus = NULL;
 TextLayer* graph_text_layer_exercise = NULL;
 TextLayer* graph_text_layer_cgmsensor = NULL;
+TextLayer* graph_text_layer_insulinchange = NULL;
 char messageresultwindow[100];
 
 char outputtext[150];
@@ -125,6 +127,12 @@ int exercise_minutes = 0;
 char cgmsensorchange[20];
 static char *cgmsensoroptions[2] = { "Sensor Start", "Sensor Change"};
 int cgmsensorindex = 0;
+
+// Insulin Change
+char insulinchange_change[20];
+static char *insulinchangeoptions[2] = { "Pump insulin", "Pen Insulin"};
+int insulinchangeindex = 0;
+
 /////////////////////////////////////// ERROR HANDLING ///////////////
 
 
@@ -427,6 +435,8 @@ void ResetToDefaults()
 	// CGM Sensor
 	cgmsensorindex = 0;
 	
+	// Insulin CHANGE
+	insulinchangeindex = 0;
   }
 
 //////////////////////// POPULATE WINDOW ///////////////////////////////////////
@@ -1383,6 +1393,101 @@ void cgmsensor_unload_graph(Window *window) {
    window_destroy(cgmsensor_window);
 }
 /////////////////////// END OF CGM SENSOR ///////////////////////////////
+//////// INSULIN CHANGE ////////////////////////////////////////////////////////////////
+// returns the string of the new site location selection
+char* GetInsulinChange(int change)
+{
+   insulinchangeindex += change;
+  
+   int count = sizeof(insulinchangeoptions)/sizeof(*insulinchangeoptions);
+   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###GetInsulinChange: count: %d ###", count);
+   if(insulinchangeindex >= count)
+   {
+     insulinchangeindex = 0;
+   }
+   else if(insulinchangeindex < 0)
+   {
+     insulinchangeindex = count - 1;      
+   } 
+   snprintf(insulinchange_change, sizeof(insulinchange_change), "%s", insulinchangeoptions[insulinchangeindex]);
+   return insulinchange_change;
+}
+
+
+
+void Set_GraphText_layer_insulinchange(TextLayer* currentlayer, int change)
+{
+  static char s_packet_id_text[50];
+
+  char * insulinchange = GetInsulinChange(change);
+  
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin Option:\n %s", insulinchange);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "Insulin Option: %s", insulinchange);
+  text_layer_set_text(currentlayer, s_packet_id_text);
+}
+
+static void up_click_handler_insulinchange(ClickRecognizerRef recognizer, void *context) { 
+  Set_GraphText_layer_insulinchange(graph_text_layer_insulinchange, UP);
+	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_insulinchange: Exiting###");
+}
+
+static void select_click_handler_insulinchange(ClickRecognizerRef recognizer, void *context) {
+    char * insulinchange = GetInsulinChange(INITIAL);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_insulinchange - Insulin Option: %s", insulinchange);
+    snprintf(outputtext, sizeof(outputtext), "You are adding insulin Option:\n '%s'  to Care Portal.", insulinchange);
+    snprintf(keyname, sizeof(keyname), "notes");
+    snprintf(resultvalue, sizeof(resultvalue), "Insulin Option: %s", insulinchange);
+    snprintf(eventtype,sizeof(eventtype), "Insulin Change");
+  
+    create_populate_window();
+}
+
+static void down_click_handler_insulinchange(ClickRecognizerRef recognizer, void *context) {
+  Set_GraphText_layer_insulinchange(graph_text_layer_insulinchange, DOWN);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_insulinchange: Exiting###");
+}
+
+
+static void click_config_provider_insulinchange(void *context) {
+  // Register the ClickHandlers
+  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_insulinchange);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_insulinchange);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_insulinchange);
+}
+
+void insulinchange_load_graph(Window *window) {
+  
+  ResetToDefaults();
+  Layer *window_layer_graph = NULL;
+  
+  window_layer_graph = window_get_root_layer(insulinchange_window);
+#ifdef PBL_ROUND
+  graph_text_layer_insulinchange = text_layer_create(GRect(0, 60, 180, 170));
+#else
+  graph_text_layer_insulinchange = text_layer_create(GRect(0, 20, 144, 170));
+#endif
+ 
+  Set_GraphText_layer_insulinchange(graph_text_layer_insulinchange, INITIAL);
+  text_layer_set_text_color(graph_text_layer_insulinchange, COL_DARK);
+  text_layer_set_background_color(graph_text_layer_insulinchange, COL_LIGHT);
+  text_layer_set_font(graph_text_layer_insulinchange, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(graph_text_layer_insulinchange, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_insulinchange));
+  
+  window_set_click_config_provider(insulinchange_window,(ClickConfigProvider)click_config_provider_insulinchange);
+}
+
+void insulinchange_unload_graph(Window *window) {
+   if(graph_text_layer_insulinchange)
+   {
+     text_layer_destroy(graph_text_layer_insulinchange);
+   }
+   insulinchangeindex =0;
+   window_destroy(insulinchange_window);
+}
+/////////////////////// END OF INSULIN CHANGE ///////////////////////////////
+
+
 ///////////////////////////// MAIN WINDOW /////////////////////////////////
 static void menu_select_callback(int index, void *ctx) {
   
@@ -1471,7 +1576,7 @@ static void menu_select_callback(int index, void *ctx) {
 
         window_stack_push(exercise_window, true);
   }
-   else if(index == 7)
+  else if(index == 7)
   {
         cgmsensor_window = window_create();
         window_set_window_handlers(cgmsensor_window, 
@@ -1482,6 +1587,18 @@ static void menu_select_callback(int index, void *ctx) {
         );  
 
         window_stack_push(cgmsensor_window, true);
+    }  
+   else if(index == 8)
+   {
+        insulinchange_window = window_create();
+        window_set_window_handlers(insulinchange_window, 
+            (WindowHandlers){
+                .load   = insulinchange_load_graph,
+                    .unload = insulinchange_unload_graph,
+        }
+        );  
+
+        window_stack_push(insulinchange_window, true);
     }  
 }
 
@@ -1520,7 +1637,10 @@ static void main_window_load(Window *window) {
         .title = "CGM Sensor",
             .callback = menu_select_callback,
     };
-  
+    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+        .title = "Insulin Change",
+            .callback = menu_select_callback,
+    };
    // Version information
     snprintf(version, sizeof(version), "Version %d.%d", __pbl_app_info.process_version.major, __pbl_app_info.process_version.minor);
     s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
