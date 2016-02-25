@@ -10,6 +10,7 @@
         "KEY_EVENT_TYPE": 7,
         "KEY_VALUE": 6,
         "PERCENT": 12,
+        "PROFILE": 18,
         "SPLITEXT": 17,
         "SPLITNOW": 16,
         "SUCCESS": 10

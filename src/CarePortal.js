@@ -140,7 +140,8 @@ function MongoDBContents(e, enteredBy, units)
     var insulin = e.payload.INSULIN;
     var splitnow = e.payload.SPLITNOW;
     var splitext = e.payload.SPLITEXT;
-  
+    var profile = e.payload.PROFILE;
+	
     var contents = {
       "enteredBy" : enteredBy,
       "eventType" : eventtype,
@@ -170,6 +171,11 @@ function MongoDBContents(e, enteredBy, units)
          contents = AddComboBolous(contents, insulin, splitnow, splitext);
     }
   
+    // Profile Switch
+	if(profile !== undefined && profile !== null)
+    {
+         contents.profile = profile;
+    }
     return contents;
 }
 

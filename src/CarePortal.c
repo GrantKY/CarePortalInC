@@ -7,7 +7,7 @@ char version[20];
 
 //https://github.com/pebble-examples/feature-simple-menu-layer
 #define NUM_MENU_SECTIONS 2
-#define NUM_FIRST_MENU_ITEMS 10
+#define NUM_FIRST_MENU_ITEMS 11
 #define NUM_SECOND_MENU_ITEMS 1
 
 #define KEY_DATA 5
@@ -23,6 +23,7 @@ char version[20];
 #define INSULIN 15
 #define SPLITNOW 16
 #define SPLITEXT 17
+#define PROFILE 18
 
 #define MMOL_INTEGER_DEFAULT 5
 #define MMOL_FRACTIONAL_DEFAULT 6
@@ -48,6 +49,7 @@ static Window *combobolus_window = NULL;
 static Window *exercise_window = NULL;
 static Window *cgmsensor_window = NULL;
 static Window *insulinchange_window = NULL;
+static Window *profileswitch_window = NULL;
 
 static SimpleMenuLayer *s_simple_menu_layer;
 static SimpleMenuSection s_menu_sections[NUM_MENU_SECTIONS];
@@ -63,6 +65,7 @@ TextLayer *graph_text_layer_combobolus = NULL;
 TextLayer* graph_text_layer_exercise = NULL;
 TextLayer* graph_text_layer_cgmsensor = NULL;
 TextLayer* graph_text_layer_insulinchange = NULL;
+TextLayer* graph_text_layer_profileswitch = NULL;
 char messageresultwindow[100];
 
 char outputtext[150];
@@ -79,6 +82,7 @@ char insulin[10];
 char splitnow[10];
 char splitext[10];
 char enteredinsulin[10];
+char profile[10];
 
 char pumpsitechange[50];
 int pumpsiteindex = 0;
@@ -132,6 +136,11 @@ int cgmsensorindex = 0;
 char insulinchange_change[20];
 static char *insulinchangeoptions[2] = { "Pump insulin", "Pen Insulin"};
 int insulinchangeindex = 0;
+
+// Profile Switch
+char profileswitch_change[20];
+static char *profileswitchoptions[3] = { "Holidays", "Weekday", "Weekend"};
+int profileswitchindex = 0;
 
 /////////////////////////////////////// ERROR HANDLING ///////////////
 
@@ -437,6 +446,18 @@ void ResetToDefaults()
 	
 	// Insulin CHANGE
 	insulinchangeindex = 0;
+	
+	// Profile Switch
+	profileswitchindex = 0;
+	
+	memset(eventtype, 0, sizeof(eventtype));
+	memset(unitsused, 0, sizeof(unitsused));
+	memset(insulin, 0, sizeof(insulin));
+	memset(splitnow, 0, sizeof(splitnow));
+	memset(splitext, 0, sizeof(splitext));
+	memset(enteredinsulin, 0, sizeof(enteredinsulin));
+	memset(profile, 0, sizeof(profile));
+	
   }
 
 //////////////////////// POPULATE WINDOW ///////////////////////////////////////
@@ -496,7 +517,11 @@ void select_click_handler_populate(ClickRecognizerRef recognizer, void *context)
            app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: splitext: %s ###", splitext);
            dict_write_cstring(iter, SPLITEXT, &splitext[0]);
         }
-
+        if(strlen(profile) != 0)
+		{
+           app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: profile: %s ###", profile);
+           dict_write_cstring(iter, PROFILE, &profile[0]);
+        }
         app_message_outbox_send();
 
         window_stack_pop_all(true);
@@ -1487,6 +1512,100 @@ void insulinchange_unload_graph(Window *window) {
 }
 /////////////////////// END OF INSULIN CHANGE ///////////////////////////////
 
+//////// PROFILE SWITCH ////////////////////////////////////////////////////////////////
+// returns the string of the new site location selection
+char* GetProfileSwitch(int change)
+{
+   profileswitchindex += change;
+  
+   int count = sizeof(profileswitchoptions)/sizeof(*profileswitchoptions);
+   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###GetProfileSwitch: count: %d ###", count);
+   if(profileswitchindex >= count)
+   {
+     profileswitchindex = 0;
+   }
+   else if(profileswitchindex < 0)
+   {
+     profileswitchindex = count - 1;      
+   } 
+   snprintf(profileswitch_change, sizeof(insulinchange_change), "%s", profileswitchoptions[profileswitchindex]);
+   return profileswitch_change;
+}
+
+
+
+void Set_GraphText_layer_profileswitch(TextLayer* currentlayer, int change)
+{
+  static char s_packet_id_text[50];
+
+  char * profileswitch = GetProfileSwitch(change);
+  
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Profile Switch:\n %s", profileswitch);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "Insulin Option: %s", profileswitch);
+  text_layer_set_text(currentlayer, s_packet_id_text);
+}
+
+static void up_click_handler_profileswitch(ClickRecognizerRef recognizer, void *context) { 
+  Set_GraphText_layer_profileswitch(graph_text_layer_profileswitch, UP);
+	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_profileswitch: Exiting###");
+}
+
+static void select_click_handler_profileswitch(ClickRecognizerRef recognizer, void *context) {
+    char * profileswitch = GetProfileSwitch(INITIAL);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_profileswitch - Profile Switch: %s", profileswitch);
+    snprintf(outputtext, sizeof(outputtext), "You are adding Profile Switch:\n '%s'  to Care Portal.", profileswitch);
+    snprintf(keyname, sizeof(keyname), "notes");
+    snprintf(resultvalue, sizeof(resultvalue), "Profile Switch: %s", profileswitch);
+    snprintf(eventtype,sizeof(eventtype), "Profile Switch");
+    snprintf(eventtype,sizeof(profile), "%s", profileswitch);
+    create_populate_window();
+}
+
+static void down_click_handler_profileswitch(ClickRecognizerRef recognizer, void *context) {
+  Set_GraphText_layer_profileswitch(graph_text_layer_profileswitch, DOWN);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_profileswitch: Exiting###");
+}
+
+
+static void click_config_provider_profileswitch(void *context) {
+  // Register the ClickHandlers
+  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_profileswitch);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_profileswitch);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_profileswitch);
+}
+
+void profileswitch_load_graph(Window *window) {
+  
+  ResetToDefaults();
+  Layer *window_layer_graph = NULL;
+  
+  window_layer_graph = window_get_root_layer(profileswitch_window);
+#ifdef PBL_ROUND
+  graph_text_layer_profileswitch = text_layer_create(GRect(0, 60, 180, 170));
+#else
+  graph_text_layer_profileswitch = text_layer_create(GRect(0, 20, 144, 170));
+#endif
+ 
+  Set_GraphText_layer_profileswitch(graph_text_layer_profileswitch, INITIAL);
+  text_layer_set_text_color(graph_text_layer_profileswitch, COL_DARK);
+  text_layer_set_background_color(graph_text_layer_profileswitch, COL_LIGHT);
+  text_layer_set_font(graph_text_layer_profileswitch, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(graph_text_layer_profileswitch, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_profileswitch));
+  
+  window_set_click_config_provider(profileswitch_window,(ClickConfigProvider)click_config_provider_profileswitch);
+}
+
+void profileswitch_unload_graph(Window *window) {
+   if(graph_text_layer_profileswitch)
+   {
+     text_layer_destroy(graph_text_layer_profileswitch);
+   }
+   insulinchangeindex =0;
+   window_destroy(profileswitch_window);
+}
+/////////////////////// END OF PROFILE SWITCH ///////////////////////////////
+
 
 ///////////////////////////// MAIN WINDOW /////////////////////////////////
 static void menu_select_callback(int index, void *ctx) {
@@ -1600,6 +1719,18 @@ static void menu_select_callback(int index, void *ctx) {
 
         window_stack_push(insulinchange_window, true);
     }  
+   else if(index == 9)
+   {
+        profileswitch_window = window_create();
+        window_set_window_handlers(profileswitch_window, 
+            (WindowHandlers){
+                .load   = profileswitch_load_graph,
+                    .unload = profileswitch_unload_graph,
+        }
+        );  
+
+        window_stack_push(profileswitch_window, true);
+    }  
 }
 
 static void main_window_load(Window *window) {
@@ -1641,6 +1772,11 @@ static void main_window_load(Window *window) {
         .title = "Insulin Change",
             .callback = menu_select_callback,
     };
+	s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+        .title = "Profile Switch",
+            .callback = menu_select_callback,
+    };
+	
    // Version information
     snprintf(version, sizeof(version), "Version %d.%d", __pbl_app_info.process_version.major, __pbl_app_info.process_version.minor);
     s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
