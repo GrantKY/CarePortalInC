@@ -10,7 +10,7 @@ Pebble.addEventListener("webviewclosed", function(e) {
                         var opts = JSON.parse(decodeURIComponent(e.response));
                         console.log("CLOSE CONFIG OPTIONS = " + JSON.stringify(opts));
                         // store configuration in local storage
-                        localStorage.setItem('portalPebble', JSON.stringify(opts));    
+                        localStorage.setItem('portalPebble1', JSON.stringify(opts));    
                         var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units},
                                             function(e) {
                                                          console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
@@ -25,7 +25,7 @@ Pebble.addEventListener('ready',
   function(e) {
     console.log('JavaScript app ready and running!');
     var opts = [ ].slice.call(arguments).pop( );
-    opts = JSON.parse(localStorage.getItem('portalPebble'));  
+    opts = JSON.parse(localStorage.getItem('portalPebble1'));  
     var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units},
           function(e) {
                         console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
@@ -47,7 +47,7 @@ Pebble.addEventListener('appmessage',
     //get options from configuration window
 
     var opts = [ ].slice.call(arguments).pop( );
-    opts = JSON.parse(localStorage.getItem('portalPebble'));
+    opts = JSON.parse(localStorage.getItem('portalPebble1'));
 
     console.log(opts);
 	  // check if endpoint exists

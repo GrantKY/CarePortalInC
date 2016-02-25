@@ -7,7 +7,7 @@ char version[20];
 
 //https://github.com/pebble-examples/feature-simple-menu-layer
 #define NUM_MENU_SECTIONS 2
-#define NUM_FIRST_MENU_ITEMS 7
+#define NUM_FIRST_MENU_ITEMS 8
 #define NUM_SECOND_MENU_ITEMS 1
 
 #define KEY_DATA 5
@@ -45,6 +45,7 @@ static Window *tempbasal_window = NULL;
 static Window *uploadresult_window = NULL;
 static Window *bg_window = NULL;
 static Window *combobolus_window = NULL;
+static Window *exercise_window = NULL;
 
 static SimpleMenuLayer *s_simple_menu_layer;
 static SimpleMenuSection s_menu_sections[NUM_MENU_SECTIONS];
@@ -57,6 +58,7 @@ TextLayer *graph_text_layer_TempBasal = NULL;
 TextLayer *graph_text_layer_uploadresult = NULL;
 TextLayer *graph_text_layer_bg = NULL;
 TextLayer *graph_text_layer_combobolus = NULL;
+TextLayer* graph_text_layer_exercise = NULL;
 char messageresultwindow[100];
 
 char outputtext[150];
@@ -107,13 +109,17 @@ void LongVibe(){
   vibes_long_pulse();
 };
 
-// Combo Bolis
+// Combo Bolus
 int combo_bolus_insulin_integerpart = 0;
 int combo_bolus_insulin_fractionalpart = 0;
 int combo_bolus_combo_per = 100;
 int combo_bolus_minutes = 0;
 int combo_bolus_currentstep = 0; //0 - integer part, 1 - fractional part, 2 - combo bolus percentage, 3 - minutes.
+int timestepincrement = 10;
 
+
+// Exercise
+int exercise_minutes = 0;
 /////////////////////////////////////// ERROR HANDLING ///////////////
 
 
@@ -402,7 +408,17 @@ void ResetToDefaults()
   {
     integerpart_bg = MGDL_DEFAULT;
   }
-}
+  
+  //coombo bolus
+   combo_bolus_insulin_integerpart = 0;
+   combo_bolus_insulin_fractionalpart = 0;
+   combo_bolus_combo_per = 100;
+   combo_bolus_minutes = 0;
+   combo_bolus_currentstep = 0; 
+  
+  // Exercise
+    exercise_minutes = 0;
+  }
 
 //////////////////////// POPULATE WINDOW ///////////////////////////////////////
 void select_click_handler_populate(ClickRecognizerRef recognizer, void *context) {
@@ -1024,7 +1040,7 @@ void UpdateComboBolusDetails(int change)
     }
     else if(combo_bolus_currentstep == 3)
     {
-        int timestepincrement = 10;
+       // int timestepincrement = 10;
         if(combo_bolus_minutes != 0 )
         {
             if(change == UP)
@@ -1151,7 +1167,120 @@ void combobolus_unload_graph(Window *window) {
 /////////////////////// END 
 
 
-////////////End of Combo Bolus Window///////////////
+////////////End of Combo Bolus Window
+
+
+////////////////////// EXERCISE WINDOW///////////////////////////////////////////////////////////
+
+void UpdateExerciseDetails(int change)
+{
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateExerciseDetails: %d", change);
+    
+
+	if(exercise_minutes != 0 )
+	{
+		if(change == UP)
+		{
+			exercise_minutes += timestepincrement;
+		}
+		else if(change == DOWN)
+		{
+			exercise_minutes -= timestepincrement;
+		}
+
+	}
+	else if(exercise_minutes == 0)
+	{
+		if(change == UP)
+		{
+			exercise_minutes += timestepincrement;
+		}
+		else if(change == DOWN)
+		{
+			app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateExerciseDetails- exercise_minutes < 0 not allowed");
+		}
+	}
+}
+
+
+
+
+void Set_GraphText_layer_exercise(TextLayer* currentlayer, int change)
+{
+    static char s_packet_id_text[60];
+    UpdateExerciseDetails(change);
+    //char * sitechange = GetPumpSiteChangeLocation(change);
+
+    snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Exercise: %d minutes", exercise_minutes);
+    text_layer_set_text(currentlayer, s_packet_id_text);
+}
+
+static void up_click_handler_exercise(ClickRecognizerRef recognizer, void *context) {
+    Set_GraphText_layer_exercise(graph_text_layer_exercise, UP);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_exercise: Exiting###");
+}
+
+static void select_click_handler_exercise(ClickRecognizerRef recognizer, void *context) {
+ 
+
+	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_exercise");
+	snprintf(outputtext, sizeof(outputtext), "You are adding Exercise: %d minutes",exercise_minutes );
+
+	snprintf(keyname, sizeof(keyname), "notes");
+	snprintf(resultvalue, sizeof(resultvalue),  "Exercise Added");
+	snprintf(eventtype,sizeof(eventtype), "Exercise");
+	snprintf(duration,sizeof(duration), "%d",exercise_minutes );
+	
+  	create_populate_window();
+
+}
+
+static void down_click_handler_exercise(ClickRecognizerRef recognizer, void *context) {
+    Set_GraphText_layer_exercise(graph_text_layer_exercise,DOWN);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_exercise: Exiting###");
+}
+
+
+static void click_config_provider_exercise(void *context) {
+    // Register the ClickHandlers
+    window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_exercise);
+    window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_exercise);
+    window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_exercise);
+    window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_exercise);
+    window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_exercise);
+}
+
+void exercise_load_graph(Window *window) {
+
+    ResetToDefaults();
+    Layer *window_layer_graph = NULL;
+
+    window_layer_graph = window_get_root_layer(exercise_window);
+#ifdef PBL_ROUND
+    graph_text_layer_exercise = text_layer_create(GRect(0, 60, 180, 170));
+#else
+    graph_text_layer_exercise = text_layer_create(GRect(0, 20, 144, 170));
+#endif
+
+    Set_GraphText_layer_exercise(graph_text_layer_exercise, INITIAL);
+    text_layer_set_text_color(graph_text_layer_exercise, COL_DARK);
+    text_layer_set_background_color(graph_text_layer_exercise, COL_LIGHT);
+    text_layer_set_font(graph_text_layer_exercise, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+    text_layer_set_text_alignment(graph_text_layer_exercise, GTextAlignmentCenter);
+    layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_exercise));
+
+    window_set_click_config_provider(exercise_window,(ClickConfigProvider)click_config_provider_exercise);
+
+}
+
+void exercise_unload_graph(Window *window) {
+    if(graph_text_layer_exercise)
+    {
+        text_layer_destroy(graph_text_layer_exercise);
+    }
+
+    window_destroy(exercise_window);
+}
 
 ///////////////////////////// MAIN WINDOW /////////////////////////////////
 static void menu_select_callback(int index, void *ctx) {
@@ -1205,18 +1334,6 @@ static void menu_select_callback(int index, void *ctx) {
     	  window_stack_push(bg_window, true);
   }
   else if(index == 4)
-  {
-        pumpsitechange_window = window_create();
-        window_set_window_handlers(pumpsitechange_window, 
-            (WindowHandlers){
-                .load   = pumpsitechange_load_graph,
-                    .unload = pumpsitechange_unload_graph,
-        }
-        );  
-
-        window_stack_push(pumpsitechange_window, true);
-    }
-    else if(index == 5)
     {
         combobolus_window = window_create();
         window_set_window_handlers(combobolus_window, 
@@ -1229,6 +1346,31 @@ static void menu_select_callback(int index, void *ctx) {
         window_stack_push(combobolus_window, true);
 
     }
+  else if(index == 5)
+  {
+        pumpsitechange_window = window_create();
+        window_set_window_handlers(pumpsitechange_window, 
+            (WindowHandlers){
+                .load   = pumpsitechange_load_graph,
+                    .unload = pumpsitechange_unload_graph,
+        }
+        );  
+
+        window_stack_push(pumpsitechange_window, true);
+    }
+  else if(index == 6)
+  {
+    exercise_window = window_create();
+        window_set_window_handlers(exercise_window, 
+            (WindowHandlers){
+                .load   = exercise_load_graph,
+                    .unload = exercise_unload_graph,
+        }
+        );  
+
+        window_stack_push(exercise_window, true);
+  }
+    
 }
 
 static void main_window_load(Window *window) {
@@ -1251,17 +1393,20 @@ static void main_window_load(Window *window) {
             .callback = menu_select_callback,
     };
     s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+        .title = "Combo Bolus",
+            .callback = menu_select_callback,
+    };
+    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
         .title = "Pump Site Change",
             .callback = menu_select_callback,
     };
     s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Combo Bolus",
+        .title = "Exercise",
             .callback = menu_select_callback,
     };
-
+  
+   // Version information
     snprintf(version, sizeof(version), "Version %d.%d", __pbl_app_info.process_version.major, __pbl_app_info.process_version.minor);
-
-
     s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
         .title = version,
     };
@@ -1297,7 +1442,7 @@ static void init()
     });
   
   
-  // Registering callbacks
+  // Registering callbacksGColorOxfordBlue
     app_message_register_inbox_received(inbox_received_callback);
     app_message_register_inbox_dropped(inbox_dropped_callback);
     app_message_register_outbox_failed(outbox_failed_callback);
