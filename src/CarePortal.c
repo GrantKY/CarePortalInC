@@ -7,7 +7,7 @@ char version[20];
 
 //https://github.com/pebble-examples/feature-simple-menu-layer
 #define NUM_MENU_SECTIONS 2
-#define NUM_FIRST_MENU_ITEMS 8
+#define NUM_FIRST_MENU_ITEMS 9
 #define NUM_SECOND_MENU_ITEMS 1
 
 #define KEY_DATA 5
@@ -46,6 +46,7 @@ static Window *uploadresult_window = NULL;
 static Window *bg_window = NULL;
 static Window *combobolus_window = NULL;
 static Window *exercise_window = NULL;
+static Window *cgmsensor_window = NULL;
 
 static SimpleMenuLayer *s_simple_menu_layer;
 static SimpleMenuSection s_menu_sections[NUM_MENU_SECTIONS];
@@ -59,6 +60,7 @@ TextLayer *graph_text_layer_uploadresult = NULL;
 TextLayer *graph_text_layer_bg = NULL;
 TextLayer *graph_text_layer_combobolus = NULL;
 TextLayer* graph_text_layer_exercise = NULL;
+TextLayer* graph_text_layer_cgmsensor = NULL;
 char messageresultwindow[100];
 
 char outputtext[150];
@@ -82,8 +84,6 @@ static char *pumpsitelocations[9] = { "RHS Stomach", "LHS Stomach", "RHS Bottom"
 
 bool bBasalSet = false;
 char TempBasal[150];
-//int TempBasalindex = 0;
-//static char *TempBasallist[7]={ "Plus 10% for 1hr", "Plus 20% for 1hr", "Plus 30% for 1hr", "Plus 40% for 1 hr", "Basal off for 30 mins", "Basal off for 1hr", "other" };
 int iTempBasalPercentage = 0;
 int iTempBasalMinutes = 0;
 
@@ -120,6 +120,11 @@ int timestepincrement = 10;
 
 // Exercise
 int exercise_minutes = 0;
+
+// CGM Sensor
+char cgmsensorchange[20];
+static char *cgmsensoroptions[2] = { "Sensor Start", "Sensor Change"};
+int cgmsensorindex = 0;
 /////////////////////////////////////// ERROR HANDLING ///////////////
 
 
@@ -418,6 +423,10 @@ void ResetToDefaults()
   
   // Exercise
     exercise_minutes = 0;
+	
+	// CGM Sensor
+	cgmsensorindex = 0;
+	
   }
 
 //////////////////////// POPULATE WINDOW ///////////////////////////////////////
@@ -1281,7 +1290,99 @@ void exercise_unload_graph(Window *window) {
 
     window_destroy(exercise_window);
 }
+//////// CGM SENSOR ////////////////////////////////////////////////////////////////
+// returns the string of the new site location selection
+char* GetCGMSensorOption(int change)
+{
+   cgmsensorindex += change;
+  
+   int count = sizeof(cgmsensoroptions)/sizeof(*cgmsensoroptions);
+   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###GetCGMSensorOption: count: %d ###", count);
+   if(cgmsensorindex >= count)
+   {
+     cgmsensorindex = 0;
+   }
+   else if(cgmsensorindex < 0)
+   {
+     cgmsensorindex = count - 1;      
+   } 
+   snprintf(cgmsensorchange, sizeof(cgmsensorchange), "%s", cgmsensoroptions[cgmsensorindex]);
+   return cgmsensorchange;
+}
 
+
+
+void Set_GraphText_layer_cgmsensor(TextLayer* currentlayer, int change)
+{
+  static char s_packet_id_text[50];
+
+  char * cgmchange = GetCGMSensorOption(change);
+  
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "CGM Sensor option: %s", cgmchange);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "CGM Sensor option: %s", cgmchange);
+  text_layer_set_text(currentlayer, s_packet_id_text);
+}
+
+static void up_click_handler_cgmsensor(ClickRecognizerRef recognizer, void *context) { 
+  Set_GraphText_layer_cgmsensor(graph_text_layer_cgmsensor, UP);
+	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_cgmsensor: Exiting###");
+}
+
+static void select_click_handler_cgmsensor(ClickRecognizerRef recognizer, void *context) {
+    char * cgmchange = GetCGMSensorOption(INITIAL);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_cgmsensor - CGM Sensor: %s", cgmchange);
+    snprintf(outputtext, sizeof(outputtext), "You are adding '%s'  to Care Portal.", cgmchange);
+    snprintf(keyname, sizeof(keyname), "notes");
+    snprintf(resultvalue, sizeof(resultvalue), "CGM Sensor: %s", cgmchange);
+    snprintf(eventtype,sizeof(eventtype), "%s", cgmchange);
+  
+    create_populate_window();
+}
+
+static void down_click_handler_cgmsensor(ClickRecognizerRef recognizer, void *context) {
+  Set_GraphText_layer_cgmsensor(graph_text_layer_cgmsensor, DOWN);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_cgmsensor: Exiting###");
+}
+
+
+static void click_config_provider_cgmsensor(void *context) {
+  // Register the ClickHandlers
+  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_cgmsensor);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_cgmsensor);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_cgmsensor);
+}
+
+void cgmsensor_load_graph(Window *window) {
+  
+  ResetToDefaults();
+  Layer *window_layer_graph = NULL;
+  
+  window_layer_graph = window_get_root_layer(cgmsensor_window);
+#ifdef PBL_ROUND
+  graph_text_layer_cgmsensor = text_layer_create(GRect(0, 60, 180, 170));
+#else
+  graph_text_layer_cgmsensor = text_layer_create(GRect(0, 20, 144, 170));
+#endif
+ 
+  Set_GraphText_layer_cgmsensor(graph_text_layer_cgmsensor, INITIAL);
+  text_layer_set_text_color(graph_text_layer_cgmsensor, COL_DARK);
+  text_layer_set_background_color(graph_text_layer_cgmsensor, COL_LIGHT);
+  text_layer_set_font(graph_text_layer_cgmsensor, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(graph_text_layer_cgmsensor, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_cgmsensor));
+  
+  window_set_click_config_provider(cgmsensor_window,(ClickConfigProvider)click_config_provider_cgmsensor);
+}
+
+void cgmsensor_unload_graph(Window *window) {
+   if(graph_text_layer_cgmsensor)
+   {
+     text_layer_destroy(graph_text_layer_cgmsensor);
+   }
+   cgmsensorindex =0;
+   window_destroy(cgmsensor_window);
+}
+/////////////////////// END OF CGM SENSOR ///////////////////////////////
 ///////////////////////////// MAIN WINDOW /////////////////////////////////
 static void menu_select_callback(int index, void *ctx) {
   
@@ -1370,7 +1471,18 @@ static void menu_select_callback(int index, void *ctx) {
 
         window_stack_push(exercise_window, true);
   }
-    
+   else if(index == 7)
+  {
+        cgmsensor_window = window_create();
+        window_set_window_handlers(cgmsensor_window, 
+            (WindowHandlers){
+                .load   = cgmsensor_load_graph,
+                    .unload = cgmsensor_unload_graph,
+        }
+        );  
+
+        window_stack_push(cgmsensor_window, true);
+    }  
 }
 
 static void main_window_load(Window *window) {
@@ -1402,6 +1514,10 @@ static void main_window_load(Window *window) {
     };
     s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
         .title = "Exercise",
+            .callback = menu_select_callback,
+    };
+    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+        .title = "CGM Sensor",
             .callback = menu_select_callback,
     };
   
