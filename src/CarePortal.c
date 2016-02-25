@@ -1557,7 +1557,7 @@ static void select_click_handler_profileswitch(ClickRecognizerRef recognizer, vo
     snprintf(keyname, sizeof(keyname), "notes");
     snprintf(resultvalue, sizeof(resultvalue), "Profile Switch: %s", profileswitch);
     snprintf(eventtype,sizeof(eventtype), "Profile Switch");
-    snprintf(eventtype,sizeof(profile), "%s", profileswitch);
+    snprintf(profile,sizeof(profile), "%s", profileswitch);
     create_populate_window();
 }
 
