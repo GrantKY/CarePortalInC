@@ -451,7 +451,7 @@ void ResetToDefaults()
 	profileswitchindex = 0;
 	
 	memset(eventtype, 0, sizeof(eventtype));
-	memset(unitsused, 0, sizeof(unitsused));
+//	memset(unitsused, 0, sizeof(unitsused));
 	memset(insulin, 0, sizeof(insulin));
 	memset(splitnow, 0, sizeof(splitnow));
 	memset(splitext, 0, sizeof(splitext));
