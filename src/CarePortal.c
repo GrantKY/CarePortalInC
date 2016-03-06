@@ -626,9 +626,9 @@ static void down_click_handler_insulin(ClickRecognizerRef recognizer, void *cont
 
 static void click_config_provider_insulin(void *context) {
   // Register the ClickHandlers
-  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_insulin);
+ // window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_insulin);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_insulin);
-  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_insulin);
+  //window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_insulin);
   // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_insulin);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_insulin);
@@ -665,12 +665,12 @@ static void down_click_handler_carbs(ClickRecognizerRef recognizer, void *contex
 
 static void click_config_provider_carbs(void *context) {
   // Register the ClickHandlers
-  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_carbs);
+  //window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_carbs);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_carbs);
-  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_carbs);
+  //window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_carbs);
   // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
-  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_carbs);
-  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_carbs);
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 30, up_click_handler_carbs);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 30, down_click_handler_carbs);
 }
 
 void carbs_load_graph(Window *window) {
@@ -872,9 +872,9 @@ static void down_click_handler_TempBasal(ClickRecognizerRef recognizer, void *co
 
 static void click_config_provider_TempBasal(void *context) {
   // Register the ClickHandlers
-  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_TempBasal);
+ // window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_TempBasal);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_TempBasal);
-  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_TempBasal);
+ // window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_TempBasal);
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_TempBasal);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_TempBasal);
 }
@@ -921,7 +921,8 @@ void Set_GraphText_layer_bg(TextLayer* currentlayer, int increment)
   Set_Part_BG(bIntegerPart_set, increment);
   int temp_integerpart = integerpart_bg;
   static char s_packet_id_text[30];
-  
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_bg unitsused: %s", unitsused);
+  //unitsused
   if(mmolsunits)
   {
       snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d.%d %s", temp_integerpart, fractionalpart_bg, unitsused);
