@@ -89,7 +89,6 @@ char splitnow[10];
 char splitext[10];
 char enteredinsulin[10];
 char profile[10];
-char carbs[10];
 
 char pumpsitechange[50];
 int pumpsiteindex = 0;
@@ -531,33 +530,27 @@ void select_click_handler_populate(ClickRecognizerRef recognizer, void *context)
         {
             dict_write_cstring(iter, GLUCOSE, &bgresult[0]);
         }
-
-        if(strlen(carbs) != 0)
-        {
-            dict_write_cstring(iter, CARBS, &carbs[0]);
-        }
         
         if(strlen(insulin) != 0)
         {
             app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: insulin: %s ###", insulin);
             dict_write_cstring(iter, INSULIN, &insulin[0]);
-        }
-        
+        }        
         
         if(strlen(splitnow) != 0)
         {
             app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: splitnow: %s ###", splitnow);
             dict_write_cstring(iter, SPLITNOW, &splitnow[0]);
         }
-
         
         if(strlen(splitext) != 0)
         {
            app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: splitext: %s ###", splitext);
            dict_write_cstring(iter, SPLITEXT, &splitext[0]);
         }
+     
         if(strlen(profile) != 0)
-		{
+		    {
            app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_populate: profile: %s ###", profile);
            dict_write_cstring(iter, PROFILE, &profile[0]);
         }
@@ -659,13 +652,21 @@ static void select_click_handler_carbs_insulin(ClickRecognizerRef recognizer, vo
     {
         snprintf(outputtext, sizeof(outputtext), "You are adding 'Carbs: %dg\nInsulin: %d.%s units'  to Care Portal.", icarbs, integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
 
-        snprintf(keyname, sizeof(keyname), "notes");
+        snprintf(keyname, sizeof(keyname), "carbs");
+	      snprintf(resultvalue, sizeof(resultvalue), "%d", icarbs);
 		    snprintf(insulin, sizeof(insulin), "%d.%s", integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
-		    snprintf(carbs, sizeof(carbs), "%d", icarbs);
-        snprintf(resultvalue, sizeof(resultvalue), "Carbs: %d g\nInsulin: %d.%s units", icarbs, integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
+        //snprintf(resultvalue, sizeof(resultvalue), "Carbs: %d g\nInsulin: %d.%s units", icarbs, integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
         snprintf(eventtype,sizeof(eventtype), "Note");
         create_populate_window();
         carbs_insulin_index = 0;
+      
+      /*
+      snprintf(outputtext, sizeof(outputtext), "You are adding 'Carbs: %d g'  to Care Portal.", icarbs);
+  snprintf(keyname, sizeof(keyname), "carbs");
+  snprintf(resultvalue, sizeof(resultvalue), "%d", icarbs);
+  snprintf(eventtype,sizeof(eventtype), "Note");
+  */
+      
     }
 }
 
@@ -1006,7 +1007,7 @@ static void select_click_handler_TempBasal(ClickRecognizerRef recognizer, void *
   {
       snprintf(outputtext, sizeof(outputtext), "You are adding 'TempBasal' %+d%% over %d hrs %d mins to Care Portal.", percentage, hrs, minutes);
       snprintf(keyname, sizeof(keyname), "notes");
-      snprintf(resultvalue, sizeof(resultvalue), "Temp Basal %+d%% over%d hrs %d mins.", percentage, hrs, minutes);
+      snprintf(resultvalue, sizeof(resultvalue), "Temp Basal %+d%% over %d hrs %d mins.", percentage, hrs, minutes);
       snprintf(eventtype,sizeof(eventtype), "Temp Basal");
       snprintf(duration,sizeof(duration), "%d",(hrs * 60) + minutes );
       snprintf(percent,sizeof(percent), "%d", percentage);
@@ -1082,6 +1083,7 @@ void Set_GraphText_layer_bg(TextLayer* currentlayer, int increment)
       snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d %s", integerpart_bg, unitsused);
   }
   text_layer_set_text(currentlayer, s_packet_id_text);
+   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_bg: : Exiting###");
 }
 
 static void select_click_handler_bg(ClickRecognizerRef recognizer, void *context) {
@@ -1097,6 +1099,7 @@ static void select_click_handler_bg(ClickRecognizerRef recognizer, void *context
   }
   snprintf(eventtype,sizeof(eventtype), "BG Check");
   create_populate_window();
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###select_click_handler_bg: : Exiting###");
 }
 
 static void up_click_handler_bg(ClickRecognizerRef recognizer, void *context) { 
@@ -1127,16 +1130,17 @@ void bg_load_graph(Window *window) {
 #else
   graph_text_layer_bg = text_layer_create(GRect(0, 20, 144, 27));
 #endif
+  static char s_packet_id_text[60];
   if(mmolsunits)
   {
-     snprintf(outputtext, sizeof(outputtext), "BG: %d.%d %s", integerpart_bg, fractionalpart_bg, unitsused);
+     snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d.%d %s", integerpart_bg, fractionalpart_bg, unitsused);
   }
   else
   {
-      snprintf(outputtext, sizeof(outputtext), "BG: %d %s", integerpart_bg, unitsused);
+      snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d %s", integerpart_bg, unitsused);
   }
 
-  text_layer_set_text(graph_text_layer_bg, outputtext);
+  text_layer_set_text(graph_text_layer_bg, s_packet_id_text);
   text_layer_set_text_color(graph_text_layer_bg, COL_DARK);
   text_layer_set_background_color(graph_text_layer_bg, COL_LIGHT);
   text_layer_set_font(graph_text_layer_bg, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));

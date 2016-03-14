@@ -1,5 +1,5 @@
 // Removed the auto codes and replace with configuration screen  below
-var insulin_increment = 0.5;
+var insulin_increment = 0.05;
 
 // adding configuration screen for the units, secret key, web URL and Pebble name
 Pebble.addEventListener("showConfiguration", function(e) {
@@ -142,7 +142,8 @@ function MongoDBContents(e, enteredBy, units)
     var splitnow = e.payload.SPLITNOW;
     var splitext = e.payload.SPLITEXT;
     var profile = e.payload.PROFILE;
-	
+	  
+  
     var contents = {
       "enteredBy" : enteredBy,
       "eventType" : eventtype,
@@ -153,7 +154,7 @@ function MongoDBContents(e, enteredBy, units)
         contents[name.toLowerCase()] = result;
     }  
 
-//  Add Temp Basal Info
+   //  Add Temp Basal Info
     if (duration !== undefined && duration !== null)
     {
       contents = AddTempBasalDetails(contents, duration, percent);
@@ -166,11 +167,19 @@ function MongoDBContents(e, enteredBy, units)
     }
     
   // Combo Bolus
-  
     if(splitnow !== undefined && splitnow !== null)
     {
          contents = AddComboBolous(contents, insulin, splitnow, splitext);
     }
+    
+    // Insulin
+    if(insulin !==undefined && insulin !== null)
+      {
+        if(contents.insulin === undefined)
+        {
+          contents.insulin = insulin;
+        }
+      }
   
     // Profile Switch
 	if(profile !== undefined && profile !== null)
