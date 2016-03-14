@@ -1,4 +1,5 @@
 // Removed the auto codes and replace with configuration screen  below
+var insulin_increment = 0.5;
 
 // adding configuration screen for the units, secret key, web URL and Pebble name
 Pebble.addEventListener("showConfiguration", function(e) {
@@ -11,7 +12,7 @@ Pebble.addEventListener("webviewclosed", function(e) {
                         console.log("CLOSE CONFIG OPTIONS = " + JSON.stringify(opts));
                         // store configuration in local storage
                         localStorage.setItem('portalPebble1', JSON.stringify(opts));    
-                        var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units},
+                        var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, INSULIN_INCREMENT: insulin_increment * 100},
                                             function(e) {
                                                          console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
                                                          },
@@ -26,7 +27,7 @@ Pebble.addEventListener('ready',
     console.log('JavaScript app ready and running!');
     var opts = [ ].slice.call(arguments).pop( );
     opts = JSON.parse(localStorage.getItem('portalPebble1'));  
-    var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units},
+    var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, INSULIN_INCREMENT: insulin_increment * 100},
           function(e) {
                         console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
                       },

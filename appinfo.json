@@ -1,10 +1,12 @@
 {
     "appKeys": {
         "BG_UNITS": 14,
+        "CARBS": 20,
         "DURATION": 11,
         "ERROR": 9,
         "GLUCOSE": 13,
         "INSULIN": 15,
+        "INSULIN_INCREMENT": 19,
         "KEY_DATA": 5,
         "KEY_EVENTTYPE": 8,
         "KEY_EVENT_TYPE": 7,

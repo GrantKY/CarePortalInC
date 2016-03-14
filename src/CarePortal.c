@@ -24,11 +24,14 @@ char version[20];
 #define SPLITNOW 16
 #define SPLITEXT 17
 #define PROFILE 18
+#define INSULIN_INCREMENT 19
+#define CARBS 20
 
 #define MMOL_INTEGER_DEFAULT 5
 #define MMOL_FRACTIONAL_DEFAULT 6
 #define MGDL_DEFAULT 150
 #define CARBS_DEFAULT 20
+#define COMBO_BOLUS_COMBO_PERCENTAGE_DEFAULT 100
 
 #define COL_DARK PBL_IF_COLOR_ELSE(GColorOxfordBlue, GColorBlack)
 #define COL_LIGHT PBL_IF_COLOR_ELSE(GColorWhite, GColorWhite)
@@ -49,7 +52,8 @@ static Window *combobolus_window = NULL;
 static Window *exercise_window = NULL;
 static Window *cgmsensor_window = NULL;
 static Window *insulinchange_window = NULL;
-static Window *profileswitch_window = NULL;
+//static Window *profileswitch_window = NULL;
+static Window *carbs_insulin_window = NULL;
 
 static SimpleMenuLayer *s_simple_menu_layer;
 static SimpleMenuSection s_menu_sections[NUM_MENU_SECTIONS];
@@ -65,7 +69,9 @@ TextLayer *graph_text_layer_combobolus = NULL;
 TextLayer* graph_text_layer_exercise = NULL;
 TextLayer* graph_text_layer_cgmsensor = NULL;
 TextLayer* graph_text_layer_insulinchange = NULL;
-TextLayer* graph_text_layer_profileswitch = NULL;
+//TextLayer* graph_text_layer_profileswitch = NULL;
+TextLayer* graph_text_layer_carbs_insulin = NULL;
+
 char messageresultwindow[100];
 
 char outputtext[150];
@@ -83,49 +89,43 @@ char splitnow[10];
 char splitext[10];
 char enteredinsulin[10];
 char profile[10];
+char carbs[10];
 
 char pumpsitechange[50];
 int pumpsiteindex = 0;
 static char *pumpsitelocations[9] = { "RHS Stomach", "LHS Stomach", "RHS Bottom", "LHS Bottom","RHS Arm", "LHS Arm", "RHS Leg", "LHS Leg", "Other" };
 
-bool bBasalSet = false;
-char TempBasal[150];
-int iTempBasalPercentage = 0;
-int iTempBasalMinutes = 0;
-
-// for setting insulin numbers - maybe add _insulin to the end.
-int integerpart = 0;
-int fractionalpart = 0;
-bool bIntegerPart_set = false;  
+// General settings
 int insulin_increment = 5;
+int timestepincrement = 5;
+int percentage_increment = 5;
 
-// BG variables
+int minutes = 0;
+int hrs = 0;
 int integerpart_bg = 0;
 int fractionalpart_bg = 0;
-bool mmolsunits = true;
-// bool bIntegerPart_bg_set = false; - not needed anymore since we're setting from the decimal in mmol
+int integerpart_insulin = 0;
+int fractionalpart_insulin = 0;
+int icarbs = 0;
+int percentage = 0;
 
+// Temp Basal
+int iBasalindex = 0; //0 - percentage, 1 - hrs 2- mins
+char TempBasal[150];
+
+// for setting insulin numbers - maybe add _insulin to the end.
+bool bIntegerPart_set = false;  
+
+// BG variables
+bool mmolsunits = true;
 static GBitmap *s_menu_icon_image;
 
-// Vibrations
-void ShortVibe(){
-  vibes_double_pulse();
-};
-void LongVibe(){
-  vibes_long_pulse();
-};
-
 // Combo Bolus
-int combo_bolus_insulin_integerpart = 0;
-int combo_bolus_insulin_fractionalpart = 0;
-int combo_bolus_combo_per = 100;
-int combo_bolus_minutes = 0;
-int combo_bolus_currentstep = 0; //0 - integer part, 1 - fractional part, 2 - combo bolus percentage, 3 - minutes.
-int timestepincrement = 10;
-
+int combo_bolus_combo_per = COMBO_BOLUS_COMBO_PERCENTAGE_DEFAULT;
+int combo_bolus_currentstep = 0; //0 - integer part, 1 - fractional part, 2 - combo bolus percentage, 3 - hrs, 4 -minutes.
 
 // Exercise
-int exercise_minutes = 0;
+int exercise_index = 0; // 0 - hrs, 1 - minutes
 
 // CGM Sensor
 char cgmsensorchange[20];
@@ -134,14 +134,69 @@ int cgmsensorindex = 0;
 
 // Insulin Change
 char insulinchange_change[20];
-static char *insulinchangeoptions[2] = { "Pump insulin", "Pen Insulin"};
+static char *insulinchangeoptions[2] = { "Reset IAGE"};
 int insulinchangeindex = 0;
 
 // Profile Switch
-char profileswitch_change[20];
-static char *profileswitchoptions[3] = { "Holidays", "Weekday", "Weekend"};
-int profileswitchindex = 0;
+//char profileswitch_change[20];
+//static char *profileswitchoptions[3] = { "Holidays", "Weekday", "Weekend"};
+//int profileswitchindex = 0;
 
+// carbs and Insulin
+int carbs_insulin_index = 0; // 0 - carbs, 1 - insulin integer part, 2 - insulin fractional part
+
+
+
+void Set_Carbs(int *current, int increment)
+{
+	*current += increment;
+	if(*current < 0)
+		*current = 0;
+}
+
+void SetHours(int *current, int change)
+{
+	*current += change;
+	if(*current < 0)
+		*current = 0;
+}
+void SetMinutes(int * current, int change)
+{
+	if(*current == 0)
+	{
+		if(change == UP)
+		{
+			*current += timestepincrement;
+		}
+		else if(change == DOWN)
+		{
+			// do  nothing
+		}
+	}
+	else if(*current != 0)
+	{
+		if(change == UP)
+		{
+			*current += timestepincrement;
+		}
+		else if(change == DOWN)
+		{
+			*current -= timestepincrement;
+		}
+	}
+	
+	if(*current == 60)
+		*current = 0;
+}
+
+// Vibrations
+void ShortVibe(){
+  vibes_double_pulse();
+};
+
+void LongVibe(){
+  vibes_long_pulse();
+};
 /////////////////////////////////////// ERROR HANDLING ///////////////
 
 
@@ -150,6 +205,7 @@ static void click_config_provider_uploadresult(void *context) {
   // Register the ClickHandlers
  // window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_populate);
 }
+
 void uploadresult_load_window(Window * window)
 {
     APP_LOG(APP_LOG_LEVEL_INFO, "uploadresult_load_window called!");
@@ -244,6 +300,12 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
            }
         }
         break;
+		case INSULIN_INCREMENT:
+         {
+           APP_LOG(APP_LOG_LEVEL_INFO, "INSULIN_INCREMENT: %d", new_tuple->value->int8);
+		       insulin_increment = new_tuple->value->int32;
+        }
+        break;
     }
     // Get next pair, if any
     new_tuple = dict_read_next(iterator);
@@ -266,103 +328,75 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
 
 // function used in incrementing the insulin count integer value.
 // if the value is less than 0 set it to 0.
-int Set_IntegerPart(int increment)
+void Set_IntegerPart(int* current, int increment)
 {
-    integerpart+= increment;  
-    if(integerpart < 0)
+    *current+= increment;  
+    if(*current < 0)
     {
-      integerpart = 0;
+      *current = 0;
     }
-  
-    return integerpart;
-}
+ }
 
 // function used to set the decimal value for the insulin count
 // possible todo:  change to similar function as BG for mmol that increments from decimal entirely and not 2 stage
-int Set_FractionPart(int increment)
+void Set_FractionPart(int* current, int increment)
 {
-  fractionalpart += increment;
-  if(fractionalpart < 0)
+  *current += increment;
+  if(*current < 0)
   {
-    fractionalpart = 0;
+    *current = 0;
   }
-  else if(fractionalpart >=100)
+  else if(*current >=100)
   {
-      fractionalpart = 0;
+      *current = 0;
   }
-  return fractionalpart;
 }
 
 // function to return the 2 digit decimal as 2 characters if the decimal value is less than 2 digits  (.00, or .05)
 char* GetFractionaPartAsChar(int currentvalue) 
 {
-    if(currentvalue<=5)
-    {
-        snprintf(fractionaText, sizeof(fractionaText), "0%d", currentvalue);
-    }
-    else
-    {
-        snprintf(fractionaText, sizeof(fractionaText), "%d", currentvalue);
-    }
-
-    return fractionaText; 
-}
-
-// determines if the insulin setting is doing the integer section or the decimal section and sets the appropriate value
-// possible todo: bring in line with the BG increment from decimal feature
-void Set_Part(bool currentPartSet, int increment)
-{
-    if(!currentPartSet)
-    {      
-       Set_IntegerPart(increment);
-    }
-    else
-    {
-        if(increment > 0)
-        {
-            Set_FractionPart(insulin_increment);
-        }
-        else
-        {  
-            Set_FractionPart(-insulin_increment);
-        }
-    }
+	if(currentvalue<=9)
+	{
+		snprintf(fractionaText, sizeof(fractionaText), "0%d", currentvalue);
+	}
+	else
+	{
+		snprintf(fractionaText, sizeof(fractionaText), "%d", currentvalue);
+	}
+  return fractionaText;
 }
 
 // determines the BG settings for the mg/dl settings.  mmol now uses just the decimal incrementer.
-int Set_IntegerPart_BG(int increment)
+void Set_IntegerPart_BG(int * current, int increment)
 {
-    integerpart_bg+= increment;  
-    if(integerpart_bg < 0)
+    *current+= increment;  
+    if(*current < 0)
     {
-      integerpart_bg = 0;
+      *current = 0;
     }
-  
-    return integerpart_bg;
 }
 
 // incremental change to the decimal section of BG.  Rolls over integer section on boundaries (>9, increment integer, <0 decrement integer if it is not 0)
-int Set_FractionPart_BG(int increment)
+void Set_FractionPart_BG(int *currentintegerpart, int *current, int increment)
 {
-  fractionalpart_bg += increment;
-  if(fractionalpart_bg < 0)
+  *current += increment;
+  if(*current < 0)
   {
-      if (integerpart_bg > 0)
+      if (*currentintegerpart > 0)
       { 
-        integerpart_bg--;
-        fractionalpart_bg = 9; 
+        *currentintegerpart= *currentintegerpart - 1;
+        *current = 9; 
       }
       else 
       {
-        fractionalpart_bg = 0; 
+        *current = 0; 
       }
   }
-  else if(fractionalpart_bg >=10)
+  else if(*current >=10)
   {
-    integerpart_bg++;  
-    fractionalpart_bg = 0;
+    *currentintegerpart = *currentintegerpart  + 1;  
+    *current = 0;
   }
-   return fractionalpart_bg;
 }
 
 // determines if it should be doing the decimal increments for mmol or the integer increment for mg/dl
@@ -370,11 +404,11 @@ void Set_Part_BG(bool currentPartSet, int increment) {
 
   if(mmolsunits)
   {
-    Set_FractionPart_BG(increment);
+    Set_FractionPart_BG(&integerpart_bg, &fractionalpart_bg, increment);
   }
   else  
   {
-    Set_IntegerPart_BG(increment);
+    Set_IntegerPart_BG(&integerpart_bg,increment);
   }
 }
 
@@ -402,14 +436,17 @@ void ResetToDefaults()
 {
   memset(keyname, 0, sizeof(keyname));
   memset(resultvalue, 0, sizeof(resultvalue));
-  integerpart = 0;
-  fractionalpart = 0;
   bIntegerPart_set = false;
+  icarbs = 0;
+  integerpart_insulin = 0;
+  fractionalpart_insulin = 0;
+  hrs = 0;
+  minutes = 0;
+  percentage = 0;
   
   // Temp Basal
-  bBasalSet = false;
-  iTempBasalPercentage = 0;
-  iTempBasalMinutes = 0;
+  iBasalindex = 0;
+  
   // reset memory allocation and initialise back to zero length
   memset(duration, 0, sizeof(duration));
   memset(percent, 0, sizeof(percent));
@@ -431,15 +468,12 @@ void ResetToDefaults()
     integerpart_bg = MGDL_DEFAULT;
   }
   
-  //coombo bolus
-   combo_bolus_insulin_integerpart = 0;
-   combo_bolus_insulin_fractionalpart = 0;
-   combo_bolus_combo_per = 100;
-   combo_bolus_minutes = 0;
+  //combo bolus
+   combo_bolus_combo_per = COMBO_BOLUS_COMBO_PERCENTAGE_DEFAULT;
    combo_bolus_currentstep = 0; 
   
   // Exercise
-    exercise_minutes = 0;
+	exercise_index = 0;
 	
 	// CGM Sensor
 	cgmsensorindex = 0;
@@ -448,16 +482,17 @@ void ResetToDefaults()
 	insulinchangeindex = 0;
 	
 	// Profile Switch
-	profileswitchindex = 0;
+	//profileswitchindex = 0;
+	
+	// Carbs and insulin
+	carbs_insulin_index = 0;	
 	
 	memset(eventtype, 0, sizeof(eventtype));
-//	memset(unitsused, 0, sizeof(unitsused));
 	memset(insulin, 0, sizeof(insulin));
 	memset(splitnow, 0, sizeof(splitnow));
 	memset(splitext, 0, sizeof(splitext));
 	memset(enteredinsulin, 0, sizeof(enteredinsulin));
-	memset(profile, 0, sizeof(profile));
-	
+	//memset(profile, 0, sizeof(profile));
   }
 
 //////////////////////// POPULATE WINDOW ///////////////////////////////////////
@@ -497,6 +532,10 @@ void select_click_handler_populate(ClickRecognizerRef recognizer, void *context)
             dict_write_cstring(iter, GLUCOSE, &bgresult[0]);
         }
 
+        if(strlen(carbs) != 0)
+        {
+            dict_write_cstring(iter, CARBS, &carbs[0]);
+        }
         
         if(strlen(insulin) != 0)
         {
@@ -574,23 +613,140 @@ void create_populate_window()
    populate_window = window_create();
     	  window_set_window_handlers(populate_window, 
     							   (WindowHandlers){
-    									                .load   = populate_load_window,
-    								                  .unload = populate_unload_window,
-                                     }
+												.load   = populate_load_window,
+											  .unload = populate_unload_window,
+										}
     							   );  
     	
   
     	  window_stack_push(populate_window, true);
 }
 
+/////////////////////START OF CARBS AND INSULIN //////////////////////
+void Set_Carbs_InsulinPart(int index, int buttonpress )
+{
+	if(index == 0) // Carbs
+	{
+    Set_Carbs(&icarbs, buttonpress);
+	//	icarbs += buttonpress;
+	}
+	else if(index == 1) // Insulin integer part
+	{
+		Set_IntegerPart(&integerpart_insulin, buttonpress);
+	}
+	else if(index == 2) // insulin fractional part
+	{
+		Set_FractionPart(&fractionalpart_insulin, insulin_increment * buttonpress);
+	}
+}
+
+void Set_GraphText_layer_carbs_Insulin(TextLayer* currentlayer, int currentindex, int buttonpress)
+{
+  Set_Carbs_InsulinPart(currentindex, buttonpress);
+  static char s_packet_id_text[60];
+  
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Carbs: %dg\n Insulin: %d.%s units", icarbs, integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
+  text_layer_set_text(currentlayer, s_packet_id_text);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_carbs_Insulin: Exiting###");
+}
+
+static void select_click_handler_carbs_insulin(ClickRecognizerRef recognizer, void *context) {
+    if(carbs_insulin_index != 2)
+    {
+      carbs_insulin_index +=  1; 
+    }
+    else
+    {
+        snprintf(outputtext, sizeof(outputtext), "You are adding 'Carbs: %dg\nInsulin: %d.%s units'  to Care Portal.", icarbs, integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
+
+        snprintf(keyname, sizeof(keyname), "notes");
+		    snprintf(insulin, sizeof(insulin), "%d.%s", integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
+		    snprintf(carbs, sizeof(carbs), "%d", icarbs);
+        snprintf(resultvalue, sizeof(resultvalue), "Carbs: %d g\nInsulin: %d.%s units", icarbs, integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
+        snprintf(eventtype,sizeof(eventtype), "Note");
+        create_populate_window();
+        carbs_insulin_index = 0;
+    }
+}
+
+static void up_click_handler_carbs_insulin(ClickRecognizerRef recognizer, void *context) { 
+	 
+    Set_GraphText_layer_carbs_Insulin(graph_text_layer_carbs_insulin,carbs_insulin_index, UP);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_carbs_insulin: Exiting###");
+}
+
+
+static void down_click_handler_carbs_insulin(ClickRecognizerRef recognizer, void *context) {
+   
+    Set_GraphText_layer_carbs_Insulin(graph_text_layer_carbs_insulin,carbs_insulin_index, DOWN);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_carbs_insulin: Exiting###");
+}
+
+static void click_config_provider_carbs_insulin(void *context) {
+  // Register the ClickHandlers
+   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_carbs_insulin);
+  // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 60, up_click_handler_carbs_insulin);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 60, down_click_handler_carbs_insulin);
+}
+
+void carbs_insulin_load_graph(Window *window) {
+  
+  ResetToDefaults();
+  Layer *window_layer_graph = NULL;
+  
+  window_layer_graph = window_get_root_layer(carbs_insulin_window);
+#ifdef PBL_ROUND
+  graph_text_layer_carbs_insulin = text_layer_create(GRect(0, 60, 180, 170));
+#else
+  graph_text_layer_carbs_insulin = text_layer_create(GRect(0, 20, 144, 170));
+#endif
+  //"Carbs: %d g \n Insulin: %d.%s units", icarbs, integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin)
+  Set_GraphText_layer_carbs_Insulin(graph_text_layer_carbs_insulin, carbs_insulin_index, INITIAL);
+ // text_layer_set_text(graph_text_layer_carbs_insulin, "Carbs: 0g\nInsulin: 0.00 units");
+  text_layer_set_text_color(graph_text_layer_carbs_insulin, COL_DARK);
+  text_layer_set_background_color(graph_text_layer_carbs_insulin, COL_LIGHT);
+  text_layer_set_font(graph_text_layer_carbs_insulin, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(graph_text_layer_carbs_insulin, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_carbs_insulin));
+  
+  window_set_click_config_provider(carbs_insulin_window,(ClickConfigProvider)click_config_provider_carbs_insulin);
+   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###carbs_insulin_load_graph: Exiting###");
+}
+
+void carbs_insulin_unload_graph(Window *window) {
+   if(graph_text_layer_carbs_insulin)
+   {
+     text_layer_destroy(graph_text_layer_carbs_insulin);
+   }
+   window_destroy(carbs_insulin_window);
+}
+/////////////////////END OF CARBS AND INSULIN //////////////////////
+
+
+
+
 ///////////////////// INSULIN //////////////////////
+// determines if the insulin setting is doing the integer section or the decimal section and sets the appropriate value
+// possible todo: bring in line with the BG increment from decimal feature
+void Set_Part(bool currentPartSet, int increment)
+{
+    if(!currentPartSet)
+    {      
+       Set_IntegerPart(&integerpart_insulin, increment);
+    }
+    else
+    {
+	   Set_FractionPart(&fractionalpart_insulin, insulin_increment * increment);
+    }
+}
+
 void Set_GraphText_layer_Insulin(TextLayer* currentlayer, bool currentPartSet, int increment)
 {
   Set_Part(bIntegerPart_set, increment);
-  int temp_integerpart = integerpart;
   static char s_packet_id_text[30];
   
-  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units", temp_integerpart, GetFractionaPartAsChar(fractionalpart));
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units", integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
 
@@ -601,73 +757,99 @@ static void select_click_handler_insulin(ClickRecognizerRef recognizer, void *co
     }
     else
     {
-        snprintf(outputtext, sizeof(outputtext), "You are adding 'Insulin: %d.%s units'  to Care Portal.", integerpart, GetFractionaPartAsChar(fractionalpart));
+        snprintf(outputtext, sizeof(outputtext), "You are adding 'Insulin: %d.%s units'  to Care Portal.", integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
 
         snprintf(keyname, sizeof(keyname), "insulin");
-        snprintf(resultvalue, sizeof(resultvalue), "%d.%s", integerpart, GetFractionaPartAsChar(fractionalpart));
+        snprintf(resultvalue, sizeof(resultvalue), "%d.%s", integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
         snprintf(eventtype,sizeof(eventtype), "Note");
         create_populate_window();
         bIntegerPart_set = false;
     }
 }
 
-static void up_click_handler_insulin(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
+static void up_click_handler_insulin(ClickRecognizerRef recognizer, void *context) { 
 	 
-    Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, 1);
-    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_insulin: Exiting###");
+    Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, UP);
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_insulin: : Exiting###");
 }
 
 
 static void down_click_handler_insulin(ClickRecognizerRef recognizer, void *context) {
    
-    Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, -1);
+    Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, DOWN);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_insulin: Exiting###");
 }
 
 static void click_config_provider_insulin(void *context) {
   // Register the ClickHandlers
- // window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_insulin);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_insulin);
-  //window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_insulin);
   // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
-  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_insulin);
-  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_insulin);
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 60, up_click_handler_insulin);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 60, down_click_handler_insulin);
+}
+
+void insulin_load_graph(Window *window) {
+  
+  ResetToDefaults();
+  Layer *window_layer_graph = NULL;
+  
+  window_layer_graph = window_get_root_layer(insulin_window);
+ #ifdef PBL_ROUND
+  graph_text_layer_insulin = text_layer_create(GRect(0, 75, 180, 27));
+#else
+  graph_text_layer_insulin = text_layer_create(GRect(0, 20, 144, 27));
+#endif  
+  text_layer_set_text(graph_text_layer_insulin, "Insulin: 0.00 units");
+  text_layer_set_text_color(graph_text_layer_insulin, COL_DARK);
+  text_layer_set_background_color(graph_text_layer_insulin, COL_LIGHT);
+  text_layer_set_font(graph_text_layer_insulin, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(graph_text_layer_insulin, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_insulin));
+  
+  window_set_click_config_provider(insulin_window,(ClickConfigProvider)click_config_provider_insulin);
+}
+
+void insulin_unload_graph(Window *window) {
+   if(graph_text_layer_insulin)
+   {
+     text_layer_destroy(graph_text_layer_insulin);
+   }
+   window_destroy(insulin_window);
 }
 
 ////////////////////// CARBS WINDOW///////////////////////////////////////////////////////////
 
 void Set_GraphText_layer_carbs(TextLayer* currentlayer, int increment)
 {
-  Set_IntegerPart(increment);
+  Set_Carbs(&icarbs, increment);
+ 
   static char s_packet_id_text[20];
-  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Carbs: %d g", integerpart);
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Carbs: %d g", icarbs);
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
 
-static void up_click_handler_carbs(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
-  Set_GraphText_layer_carbs(graph_text_layer_carbs, 1);
-	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_carbs: Exiting###");
+static void up_click_handler_carbs(ClickRecognizerRef recognizer, void *context) { 
+  Set_GraphText_layer_carbs(graph_text_layer_carbs, UP);
+	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_carbs: up_click_handler_carbs###");
 }
 
 static void select_click_handler_carbs(ClickRecognizerRef recognizer, void *context) {
-  snprintf(outputtext, sizeof(outputtext), "You are adding 'Carbs: %d g'  to Care Portal.", integerpart);
+  snprintf(outputtext, sizeof(outputtext), "You are adding 'Carbs: %d g'  to Care Portal.", icarbs);
   snprintf(keyname, sizeof(keyname), "carbs");
-  snprintf(resultvalue, sizeof(resultvalue), "%d", integerpart);
+  snprintf(resultvalue, sizeof(resultvalue), "%d", icarbs);
   snprintf(eventtype,sizeof(eventtype), "Note");
 
   create_populate_window();
 }
 
 static void down_click_handler_carbs(ClickRecognizerRef recognizer, void *context) {
-  Set_GraphText_layer_carbs(graph_text_layer_carbs, -1);
-  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_carbs: Exiting###");
+  Set_GraphText_layer_carbs(graph_text_layer_carbs, DOWN);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_carbs: down_click_handler_carbs###");
 }
 
 static void click_config_provider_carbs(void *context) {
   // Register the ClickHandlers
-  //window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_carbs);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_carbs);
-  //window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_carbs);
   // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 30, up_click_handler_carbs);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 30, down_click_handler_carbs);
@@ -703,34 +885,6 @@ void carbs_unload_graph(Window *window) {
    window_destroy(carbs_window);
 }
 
-void insulin_load_graph(Window *window) {
-  
-  ResetToDefaults();
-  Layer *window_layer_graph = NULL;
-  
-  window_layer_graph = window_get_root_layer(insulin_window);
- #ifdef PBL_ROUND
-  graph_text_layer_insulin = text_layer_create(GRect(0, 75, 180, 27));
-#else
-  graph_text_layer_insulin = text_layer_create(GRect(0, 20, 144, 27));
-#endif  
-  text_layer_set_text(graph_text_layer_insulin, "Insulin: 0.00 units");
-  text_layer_set_text_color(graph_text_layer_insulin, COL_DARK);
-  text_layer_set_background_color(graph_text_layer_insulin, COL_LIGHT);
-  text_layer_set_font(graph_text_layer_insulin, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(graph_text_layer_insulin, GTextAlignmentCenter);
-  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_insulin));
-  
-  window_set_click_config_provider(insulin_window,(ClickConfigProvider)click_config_provider_insulin);
-}
-
-void insulin_unload_graph(Window *window) {
-   if(graph_text_layer_insulin)
-   {
-     text_layer_destroy(graph_text_layer_insulin);
-   }
-   window_destroy(insulin_window);
-}
 
 //////// PUMP SITE CHANGE ////////////////////////////////////////////////////////////////
 void Set_GraphText_layer_pumpsitechange(TextLayer* currentlayer, int change)
@@ -744,7 +898,7 @@ void Set_GraphText_layer_pumpsitechange(TextLayer* currentlayer, int change)
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
 
-static void up_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
+static void up_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void *context) { 
   Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, UP);
 	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_pumpsitechange: Exiting###");
 }
@@ -764,7 +918,6 @@ static void down_click_handler_pumpsitechange(ClickRecognizerRef recognizer, voi
   Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, DOWN);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_pumpsitechange: Exiting###");
 }
-
 
 static void click_config_provider_pumpsitechange(void *context) {
   // Register the ClickHandlers
@@ -808,20 +961,21 @@ void pumpsitechange_unload_graph(Window *window) {
 ///////////////////// START OF TEMP BASAL ////////////////////////////////////
 void SetTempBasalData(int change)
 {
-    
-    if(!bBasalSet)
+    if(iBasalindex == 0)
     {
-      iTempBasalPercentage += change;
-      if(iTempBasalPercentage < -100)
-        iTempBasalPercentage = -100;
-      else if (iTempBasalPercentage > 200)
-        iTempBasalPercentage = 200;
+      percentage += percentage_increment * change;
+      if(percentage < -100)
+        percentage = -100;
+      else if (percentage > 200)
+        percentage = 200;
     }
-    else
+	else if(iBasalindex == 1)
+	{
+		SetHours(&hrs, change);
+	}
+    else if(iBasalindex == 2)
     {
-      iTempBasalMinutes += change;
-      if(iTempBasalMinutes < 0)
-        iTempBasalMinutes = 0;
+        SetMinutes(&minutes, change);
     }
 }
 
@@ -829,42 +983,40 @@ void Set_GraphText_layer_TempBasal(TextLayer* currentlayer, int change)
 {
   static char s_packet_id_text[50];
  
-  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "TempBasal: %+d%% \n over %d minutes", iTempBasalPercentage, iTempBasalMinutes);
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "TempBasal: %+d%% \n over %d hrs %d mins", percentage, hrs, minutes);
 
   text_layer_set_text(currentlayer, s_packet_id_text);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_TempBasal: Exiting###");
 }
 
-static void up_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
+static void up_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) { 
  
-  SetTempBasalData(10);  
-  
+  SetTempBasalData(UP);  
   Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, UP);
-	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_TempBasal: Exiting###");
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_TempBasal: Exiting###");
 }
 
 static void select_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) {
-  
-  
-  if(!bBasalSet)
+    
+  if(iBasalindex < 2)
   {
-      bBasalSet = true;
+      iBasalindex += 1;
   }
   else
   {
-      snprintf(outputtext, sizeof(outputtext), "You are adding 'TempBasal' %+d%% over %d minutes to Care Portal.", iTempBasalPercentage, iTempBasalMinutes);
+      snprintf(outputtext, sizeof(outputtext), "You are adding 'TempBasal' %+d%% over %d hrs %d mins to Care Portal.", percentage, hrs, minutes);
       snprintf(keyname, sizeof(keyname), "notes");
-      snprintf(resultvalue, sizeof(resultvalue), "Temp Basal %+d%% over %d minutes.", iTempBasalPercentage, iTempBasalMinutes);
+      snprintf(resultvalue, sizeof(resultvalue), "Temp Basal %+d%% over%d hrs %d mins.", percentage, hrs, minutes);
       snprintf(eventtype,sizeof(eventtype), "Temp Basal");
-      snprintf(duration,sizeof(duration), "%d",iTempBasalMinutes );
-      snprintf(percent,sizeof(percent), "%d", iTempBasalPercentage);
+      snprintf(duration,sizeof(duration), "%d",(hrs * 60) + minutes );
+      snprintf(percent,sizeof(percent), "%d", percentage);
     
       create_populate_window();
   }
 }
 
 static void down_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) {
-  SetTempBasalData(-10);  
+  SetTempBasalData(DOWN);  
   Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, DOWN);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_TempBasal: Exiting###");
 }
@@ -872,9 +1024,7 @@ static void down_click_handler_TempBasal(ClickRecognizerRef recognizer, void *co
 
 static void click_config_provider_TempBasal(void *context) {
   // Register the ClickHandlers
- // window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_TempBasal);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_TempBasal);
- // window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_TempBasal);
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_TempBasal);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_TempBasal);
 }
@@ -919,17 +1069,17 @@ void tempbasal_unload_graph(Window *window) {
 void Set_GraphText_layer_bg(TextLayer* currentlayer, int increment)
 {
   Set_Part_BG(bIntegerPart_set, increment);
-  int temp_integerpart = integerpart_bg;
+ // int temp_integerpart = integerpart_bg;
   static char s_packet_id_text[30];
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_bg unitsused: %s", unitsused);
   //unitsused
   if(mmolsunits)
   {
-      snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d.%d %s", temp_integerpart, fractionalpart_bg, unitsused);
+      snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d.%d %s", integerpart_bg, fractionalpart_bg, unitsused);
   }
   else
   {
-      snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d %s", temp_integerpart, unitsused);
+      snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d %s", integerpart_bg, unitsused);
   }
   text_layer_set_text(currentlayer, s_packet_id_text);
 }
@@ -949,21 +1099,19 @@ static void select_click_handler_bg(ClickRecognizerRef recognizer, void *context
   create_populate_window();
 }
 
-static void up_click_handler_bg(ClickRecognizerRef recognizer, void *context) { //I WOULD LIKE THE UP BUTTON PRESS TO GO TO A WINDOW CALLED WINDOW_GRAPH
+static void up_click_handler_bg(ClickRecognizerRef recognizer, void *context) { 
     Set_GraphText_layer_bg(graph_text_layer_bg, UP);
-    // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
 }
 
 static void down_click_handler_bg(ClickRecognizerRef recognizer, void *context) {
     Set_GraphText_layer_bg(graph_text_layer_bg, DOWN);
-    // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
+    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_bg: Exiting###");
 }
 
 static void click_config_provider_bg(void *context) {
   // Register the ClickHandlers
-  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_bg);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_bg);
-  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_bg);
   // using repeated clicks to scroll quickly through numbers instead of long click that has to be repressed to increment by 10.  Scrolls through 10 values / second
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_bg);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_bg);
@@ -1010,122 +1158,45 @@ void bg_unload_graph(Window *window) {
 /////////// COMBO BOLUS WINDOW///////////////
 void UpdateComboBolusDetails(int change)
 {
-    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails: %d", combo_bolus_currentstep);
-    if(combo_bolus_currentstep == 0)
+   // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails: %d", combo_bolus_currentstep);
+    if(combo_bolus_currentstep == 0) // insulin integer part
     {
-        app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_insulin_integerpart: %d", combo_bolus_insulin_integerpart);
-        combo_bolus_insulin_integerpart += change;
-        if(combo_bolus_insulin_integerpart < 0)
-        {
-          combo_bolus_insulin_integerpart = 0;
-        }
-    }
-    else if(combo_bolus_currentstep == 1)
-    {
-        app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_insulin_combo_bolus_insulin_fractionalintegerpart: %d", combo_bolus_insulin_fractionalpart);
-
-        if(change == UP)
-        {
-            combo_bolus_insulin_fractionalpart += insulin_increment;
-        }
-        else
-        {
-            combo_bolus_insulin_fractionalpart -= insulin_increment;
-        }
-
-        if(combo_bolus_insulin_fractionalpart < 0)
-        {
-            combo_bolus_insulin_fractionalpart = 0;
-        }
-        else if(combo_bolus_insulin_fractionalpart >=100)
-        {
-            combo_bolus_insulin_fractionalpart = 0;
-        }
-    }
-    else if(combo_bolus_currentstep == 2)
-    {
-        int increment = 5;
-        if(combo_bolus_combo_per != 100 && combo_bolus_combo_per != 0)
-        {
-            if(change == UP)
-            {
-                combo_bolus_combo_per += increment;
-            }
-            else if(change == DOWN)
-            {
-                combo_bolus_combo_per -= increment;
-            }
-
-        }
-        else if(combo_bolus_combo_per == 100)
-        {
-            if(change == DOWN)
-            {
-                combo_bolus_combo_per -= increment;
-            }
-            else
-            {
-                app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_combo_per > 100 not allowed");
-            }
-        }
-        else if(combo_bolus_combo_per == 0)
-        {
-            if(change == UP)
-            {
-                combo_bolus_combo_per += increment;
-            }
-            else
-            {
-                app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_combo_per < 0 not allowed");
-
-            }
-        }
-
+        //app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- integerpart_insulin: %d", integerpart_insulin);
+        Set_IntegerPart(&integerpart_insulin, change);
 
     }
-    else if(combo_bolus_currentstep == 3)
+    else if(combo_bolus_currentstep == 1) // insulin Fractional part
     {
-       // int timestepincrement = 10;
-        if(combo_bolus_minutes != 0 )
-        {
-            if(change == UP)
-            {
-                combo_bolus_minutes += timestepincrement;
-            }
-            else if(change == DOWN)
-            {
-                combo_bolus_minutes -= timestepincrement;
-            }
-
-        }
-        else if(combo_bolus_minutes == 0)
-        {
-            if(change == UP)
-            {
-                combo_bolus_minutes += timestepincrement;
-            }
-            else if(change == DOWN)
-            {
-                app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_minutes < 0 not allowed");
-            }
-        }
-
-
+     //  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateComboBolusDetails- combo_bolus_insulin_combo_bolus_insulin_fractionalintegerpart: %d", fractionalpart_insulin);
+	    Set_FractionPart(&fractionalpart_insulin, insulin_increment* change);
+    }
+    else if(combo_bolus_currentstep == 2) // Percentage
+    {
+		combo_bolus_combo_per += percentage_increment * change;
+		
+        if(combo_bolus_combo_per > 100)
+			combo_bolus_combo_per = 100;
+		
+		if (combo_bolus_combo_per < 0)
+			combo_bolus_combo_per = 0;
+    }
+	else if(combo_bolus_currentstep == 3) // hrs
+    {
+		SetHours(&hrs, change);
+	}
+    else if(combo_bolus_currentstep == 4) // minutes
+    {
+       SetMinutes(&minutes, change);
     }
 }
 
-
-
-
 void Set_GraphText_layer_combobolus(TextLayer* currentlayer, int change)
 {
-    static char s_packet_id_text[60];
+    static char s_packet_id_text[70];
     UpdateComboBolusDetails(change);
-    //char * sitechange = GetPumpSiteChangeLocation(change);
-
-    snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units.\nCombo bolus\n %d%%/%d%%\n over\n %d minutes",
-        combo_bolus_insulin_integerpart, GetFractionaPartAsChar(combo_bolus_insulin_fractionalpart), combo_bolus_combo_per, 100 - combo_bolus_combo_per,combo_bolus_minutes );
-    // app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "Pump Site Location: %s", sitechange);
+    snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Insulin: %d.%s units.\nCombo bolus\n %d%%/%d%%\n over\n %d hrs %d mins",
+        integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin), combo_bolus_combo_per, (100 - combo_bolus_combo_per),hrs, minutes );
+    
     text_layer_set_text(currentlayer, s_packet_id_text);
 }
 
@@ -1135,32 +1206,30 @@ static void up_click_handler_combobolus(ClickRecognizerRef recognizer, void *con
 }
 
 static void select_click_handler_combobolus(ClickRecognizerRef recognizer, void *context) {
-    //char * sitechange = GetPumpSiteChangeLocation(INITIAL);
-
-    if(combo_bolus_currentstep < 3)
+ 
+    if(combo_bolus_currentstep < 4)
     {
         combo_bolus_currentstep += 1;
     }
     else
     {
         app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_combobolus");
-        snprintf(outputtext, sizeof(outputtext), "You are adding Insulin: %d.%s units.\nCombo bolus\n %d%%/%d%%\n over\n %d minutes",
-            combo_bolus_insulin_integerpart, GetFractionaPartAsChar(combo_bolus_insulin_fractionalpart), combo_bolus_combo_per, 
-            100 - combo_bolus_combo_per,combo_bolus_minutes );
+		int precentagedifference = 100 - combo_bolus_combo_per;
+		
+        snprintf(outputtext, sizeof(outputtext), "You are adding Insulin: %d.%s units.\nCombo bolus\n %d%%/%d%%\n over\n %d hrs %d minutes",
+            integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin), combo_bolus_combo_per, precentagedifference, hrs, minutes );
 
         snprintf(keyname, sizeof(keyname), "notes");
         snprintf(resultvalue, sizeof(resultvalue),  "COMBO BOLUS");
         snprintf(eventtype,sizeof(eventtype), "Combo Bolus");
-        snprintf(duration,sizeof(duration), "%d",combo_bolus_minutes );
+        snprintf(duration,sizeof(duration), "%d",(hrs * 60) + minutes );
         snprintf(splitnow,sizeof(splitnow), "%d",combo_bolus_combo_per );
-        snprintf(splitext,sizeof(splitext), "%d",100 - combo_bolus_combo_per);
-        snprintf(insulin,sizeof(insulin), "%d.%s",combo_bolus_insulin_integerpart, GetFractionaPartAsChar(combo_bolus_insulin_fractionalpart) );
+        snprintf(splitext,sizeof(splitext), "%d",precentagedifference);
+        snprintf(insulin,sizeof(insulin), "%d.%s",integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin) );
       
         create_populate_window();
         combo_bolus_currentstep = 0;
     }
-
-
 }
 
 static void down_click_handler_combobolus(ClickRecognizerRef recognizer, void *context) {
@@ -1168,12 +1237,9 @@ static void down_click_handler_combobolus(ClickRecognizerRef recognizer, void *c
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_combobolus: Exiting###");
 }
 
-
 static void click_config_provider_combobolus(void *context) {
     // Register the ClickHandlers
-    window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_combobolus);
     window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_combobolus);
-    window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_combobolus);
     window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_combobolus);
     window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_combobolus);
 }
@@ -1209,54 +1275,31 @@ void combobolus_unload_graph(Window *window) {
 
     window_destroy(combobolus_window);
 }
-/////////////////////// END 
-
 
 ////////////End of Combo Bolus Window
 
 
 ////////////////////// EXERCISE WINDOW///////////////////////////////////////////////////////////
-
-void UpdateExerciseDetails(int change)
+void UpdateExerciseDetails(int index, int change)
 {
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateExerciseDetails: %d", change);
     
-
-	if(exercise_minutes != 0 )
+	if(index == 0) // Hrs
 	{
-		if(change == UP)
-		{
-			exercise_minutes += timestepincrement;
-		}
-		else if(change == DOWN)
-		{
-			exercise_minutes -= timestepincrement;
-		}
-
+		SetHours(&hrs, change);
 	}
-	else if(exercise_minutes == 0)
+    else // mins
 	{
-		if(change == UP)
-		{
-			exercise_minutes += timestepincrement;
-		}
-		else if(change == DOWN)
-		{
-			app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "UpdateExerciseDetails- exercise_minutes < 0 not allowed");
-		}
+		SetMinutes(&minutes, change);
 	}
 }
-
-
-
 
 void Set_GraphText_layer_exercise(TextLayer* currentlayer, int change)
 {
     static char s_packet_id_text[60];
-    UpdateExerciseDetails(change);
-    //char * sitechange = GetPumpSiteChangeLocation(change);
+    UpdateExerciseDetails(exercise_index, change);
 
-    snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Exercise: %d minutes", exercise_minutes);
+    snprintf(s_packet_id_text, sizeof(s_packet_id_text), "Exercise:%d hrs\n%d minutes", hrs, minutes);
     text_layer_set_text(currentlayer, s_packet_id_text);
 }
 
@@ -1267,17 +1310,23 @@ static void up_click_handler_exercise(ClickRecognizerRef recognizer, void *conte
 
 static void select_click_handler_exercise(ClickRecognizerRef recognizer, void *context) {
  
+    if(exercise_index == 0)
+	{
+		exercise_index+= 1;
+	}
+    else
+	{
+		app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_exercise");
+		snprintf(outputtext, sizeof(outputtext), "You are adding Exercise:%d hrs\n%d minutes", hrs, minutes );
 
-	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_exercise");
-	snprintf(outputtext, sizeof(outputtext), "You are adding Exercise: %d minutes",exercise_minutes );
-
-	snprintf(keyname, sizeof(keyname), "notes");
-	snprintf(resultvalue, sizeof(resultvalue),  "Exercise Added");
-	snprintf(eventtype,sizeof(eventtype), "Exercise");
-	snprintf(duration,sizeof(duration), "%d",exercise_minutes );
-	
-  	create_populate_window();
-
+		snprintf(keyname, sizeof(keyname), "notes");
+		snprintf(resultvalue, sizeof(resultvalue),  "Exercise Added");
+		snprintf(eventtype,sizeof(eventtype), "Exercise");
+		snprintf(duration,sizeof(duration), "%d",(hrs * 60) + minutes );
+		
+		create_populate_window();
+		exercise_index = 0;
+	}
 }
 
 static void down_click_handler_exercise(ClickRecognizerRef recognizer, void *context) {
@@ -1288,9 +1337,7 @@ static void down_click_handler_exercise(ClickRecognizerRef recognizer, void *con
 
 static void click_config_provider_exercise(void *context) {
     // Register the ClickHandlers
-    window_single_click_subscribe(BUTTON_ID_UP, up_click_handler_exercise);
     window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_exercise);
-    window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler_exercise);
     window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_exercise);
     window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_exercise);
 }
@@ -1423,9 +1470,9 @@ void cgmsensor_unload_graph(Window *window) {
 // returns the string of the new site location selection
 char* GetInsulinChange(int change)
 {
-   insulinchangeindex += change;
+   insulinchangeindex = 0;// += change;
   
-   int count = sizeof(insulinchangeoptions)/sizeof(*insulinchangeoptions);
+ /*  int count = sizeof(insulinchangeoptions)/sizeof(*insulinchangeoptions);
    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###GetInsulinChange: count: %d ###", count);
    if(insulinchangeindex >= count)
    {
@@ -1434,7 +1481,7 @@ char* GetInsulinChange(int change)
    else if(insulinchangeindex < 0)
    {
      insulinchangeindex = count - 1;      
-   } 
+   } */
    snprintf(insulinchange_change, sizeof(insulinchange_change), "%s", insulinchangeoptions[insulinchangeindex]);
    return insulinchange_change;
 }
@@ -1460,7 +1507,7 @@ static void up_click_handler_insulinchange(ClickRecognizerRef recognizer, void *
 static void select_click_handler_insulinchange(ClickRecognizerRef recognizer, void *context) {
     char * insulinchange = GetInsulinChange(INITIAL);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_insulinchange - Insulin Option: %s", insulinchange);
-    snprintf(outputtext, sizeof(outputtext), "You are adding insulin Option:\n '%s'  to Care Portal.", insulinchange);
+    snprintf(outputtext, sizeof(outputtext), "You are adding \n '%s'  to Care Portal.", insulinchange);
     snprintf(keyname, sizeof(keyname), "notes");
     snprintf(resultvalue, sizeof(resultvalue), "Insulin Option: %s", insulinchange);
     snprintf(eventtype,sizeof(eventtype), "Insulin Change");
@@ -1508,14 +1555,14 @@ void insulinchange_unload_graph(Window *window) {
    {
      text_layer_destroy(graph_text_layer_insulinchange);
    }
-   insulinchangeindex =0;
+   insulinchangeindex = 0;
    window_destroy(insulinchange_window);
 }
 /////////////////////// END OF INSULIN CHANGE ///////////////////////////////
 
 //////// PROFILE SWITCH ////////////////////////////////////////////////////////////////
 // returns the string of the new site location selection
-char* GetProfileSwitch(int change)
+/*char* GetProfileSwitch(int change)
 {
    profileswitchindex += change;
   
@@ -1532,8 +1579,6 @@ char* GetProfileSwitch(int change)
    snprintf(profileswitch_change, sizeof(insulinchange_change), "%s", profileswitchoptions[profileswitchindex]);
    return profileswitch_change;
 }
-
-
 
 void Set_GraphText_layer_profileswitch(TextLayer* currentlayer, int change)
 {
@@ -1605,6 +1650,7 @@ void profileswitch_unload_graph(Window *window) {
    insulinchangeindex =0;
    window_destroy(profileswitch_window);
 }
+*/
 /////////////////////// END OF PROFILE SWITCH ///////////////////////////////
 
 
@@ -1613,53 +1659,65 @@ static void menu_select_callback(int index, void *ctx) {
   
   if(index == 0)
   {
+      carbs_insulin_window = window_create();
+  	  window_set_window_handlers(carbs_insulin_window, 
+  							   (WindowHandlers){
+												.load   = carbs_insulin_load_graph,
+											  .unload = carbs_insulin_unload_graph,
+                                   }
+  							   );  
+  							  
+  	  window_stack_push(carbs_insulin_window, true);
+  }
+  else if(index == 1)
+  {
       carbs_window = window_create();
   	  window_set_window_handlers(carbs_window, 
   							   (WindowHandlers){
-  									                .load   = carbs_load_graph,
-  								                  .unload = carbs_unload_graph,
-                                   }
+												.load   = carbs_load_graph,
+											  .unload = carbs_unload_graph,
+								   }
   							   );  
   							  
   	  window_stack_push(carbs_window, true);
   }
-  else if(index == 1)
+  else if(index == 2)
   {
         insulin_window = window_create();
     	  window_set_window_handlers(insulin_window, 
     							   (WindowHandlers){
-    									                .load   = insulin_load_graph,
-    								                  .unload = insulin_unload_graph,
+													.load   = insulin_load_graph,
+												  .unload = insulin_unload_graph,
                                      }
     							   );  
     							  
     	  window_stack_push(insulin_window, true);
   }
-  else if(index == 2)
+  else if(index == 3)
   {
         tempbasal_window = window_create();
     	  window_set_window_handlers(tempbasal_window, 
     							   (WindowHandlers){
-    									                .load   = tempbasal_load_graph,
-    								                  .unload = tempbasal_unload_graph,
+													.load   = tempbasal_load_graph,
+												  .unload = tempbasal_unload_graph,
                                      }
     							   );  
     							  
     	  window_stack_push(tempbasal_window, true);
   } 
-  else if(index == 3)
+  else if(index == 4)
   {
         bg_window = window_create();
     	  window_set_window_handlers(bg_window, 
     							   (WindowHandlers){
-    									                .load   = bg_load_graph,
-    								                  .unload = bg_unload_graph,
+													.load   = bg_load_graph,
+												  .unload = bg_unload_graph,
                                      }
     							   );  
     							  
     	  window_stack_push(bg_window, true);
   }
-  else if(index == 4)
+  else if(index == 5)
     {
         combobolus_window = window_create();
         window_set_window_handlers(combobolus_window, 
@@ -1672,7 +1730,7 @@ static void menu_select_callback(int index, void *ctx) {
         window_stack_push(combobolus_window, true);
 
     }
-  else if(index == 5)
+  else if(index == 6)
   {
         pumpsitechange_window = window_create();
         window_set_window_handlers(pumpsitechange_window, 
@@ -1684,7 +1742,7 @@ static void menu_select_callback(int index, void *ctx) {
 
         window_stack_push(pumpsitechange_window, true);
     }
-  else if(index == 6)
+  else if(index == 7)
   {
     exercise_window = window_create();
         window_set_window_handlers(exercise_window, 
@@ -1696,7 +1754,7 @@ static void menu_select_callback(int index, void *ctx) {
 
         window_stack_push(exercise_window, true);
   }
-  else if(index == 7)
+  else if(index == 8)
   {
         cgmsensor_window = window_create();
         window_set_window_handlers(cgmsensor_window, 
@@ -1708,7 +1766,7 @@ static void menu_select_callback(int index, void *ctx) {
 
         window_stack_push(cgmsensor_window, true);
     }  
-   else if(index == 8)
+   else if(index == 9)
    {
         insulinchange_window = window_create();
         window_set_window_handlers(insulinchange_window, 
@@ -1720,23 +1778,28 @@ static void menu_select_callback(int index, void *ctx) {
 
         window_stack_push(insulinchange_window, true);
     }  
-   else if(index == 9)
-   {
-        profileswitch_window = window_create();
-        window_set_window_handlers(profileswitch_window, 
-            (WindowHandlers){
-                .load   = profileswitch_load_graph,
-                    .unload = profileswitch_unload_graph,
-        }
-        );  
+//   else if(index == 10)
+//  {
+//        profileswitch_window = window_create();
+//        window_set_window_handlers(profileswitch_window, 
+//            (WindowHandlers){
+//                .load   = profileswitch_load_graph,
+//                    .unload = profileswitch_unload_graph,
+//        }
+//       );  
 
-        window_stack_push(profileswitch_window, true);
-    }  
+//        window_stack_push(profileswitch_window, true);
+//    }  
 }
 
 static void main_window_load(Window *window) {
     int num_a_items = 0;
 
+	s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+        .title = "Carbs and Insulin",
+            .callback = menu_select_callback,
+    };
+	
     s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
         .title = "Carbs",
             .callback = menu_select_callback,
@@ -1773,10 +1836,10 @@ static void main_window_load(Window *window) {
         .title = "Insulin Change",
             .callback = menu_select_callback,
     };
-	s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Profile Switch",
-            .callback = menu_select_callback,
-    };
+//	s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+//        .title = "Profile Switch",
+//            .callback = menu_select_callback,
+//    };
 	
    // Version information
     snprintf(version, sizeof(version), "Version %d.%d", __pbl_app_info.process_version.major, __pbl_app_info.process_version.minor);
