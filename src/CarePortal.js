@@ -1,18 +1,23 @@
 // Removed the auto codes and replace with configuration screen  below
-var insulin_increment = 0.05;
+var insulin_increment = "5";
 
 // adding configuration screen for the units, secret key, web URL and Pebble name
 Pebble.addEventListener("showConfiguration", function(e) {
                         console.log("Showing Configuration", JSON.stringify(e));
-  Pebble.openURL('http://cgminthecloud.github.io/PebbleCareportal/config_1.html');
+//  Pebble.openURL('http://cgminthecloud.github.io/PebbleCareportal/config_1.html');
+   Pebble.openURL('http://GrantKY.github.io/CarePortalInC/config_2.html');
                         });
 
 Pebble.addEventListener("webviewclosed", function(e) {
                         var opts = JSON.parse(decodeURIComponent(e.response));
                         console.log("CLOSE CONFIG OPTIONS = " + JSON.stringify(opts));
                         // store configuration in local storage
-                        localStorage.setItem('portalPebble1', JSON.stringify(opts));    
-                        var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, INSULIN_INCREMENT: insulin_increment * 100},
+                        localStorage.setItem('portalPebble1', JSON.stringify(opts));  
+  
+                        if(opts.insulinincrement === undefined)
+                              opts.insulinincrement = insulin_increment;
+  
+                        var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, INSULIN_INCREMENT: parseInt(opts.insulinincrement)},
                                             function(e) {
                                                          console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
                                                          },
@@ -27,7 +32,12 @@ Pebble.addEventListener('ready',
     console.log('JavaScript app ready and running!');
     var opts = [ ].slice.call(arguments).pop( );
     opts = JSON.parse(localStorage.getItem('portalPebble1'));  
-    var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, INSULIN_INCREMENT: insulin_increment * 100},
+
+    if(opts.insulinincrement === undefined)
+            opts.insulinincrement = insulin_increment;
+
+    
+    var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, INSULIN_INCREMENT: parseInt(opts.insulinincrement)},
           function(e) {
                         console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
                       },
