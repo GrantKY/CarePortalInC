@@ -338,7 +338,7 @@ void Set_Part_BG(bool currentPartSet, int increment) {
 }
 
 // returns the string of the new site location selection
- char* GetPumpSiteChangeLocation(int change)
+char* GetPumpSiteChangeLocation(int change)
 {
    pumpsiteindex += change;
   
