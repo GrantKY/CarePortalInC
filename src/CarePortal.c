@@ -55,22 +55,18 @@ static Window *insulinchange_window = NULL;
 //static Window *profileswitch_window = NULL;
 static Window *carbs_insulin_window = NULL;
 
+
+static Window *activeWindow = NULL;
+TextLayer *activeLayer = NULL;
+
 static SimpleMenuLayer *s_simple_menu_layer;
 static SimpleMenuSection s_menu_sections[NUM_MENU_SECTIONS];
 static SimpleMenuItem s_first_menu_items[NUM_FIRST_MENU_ITEMS];
-TextLayer *graph_text_layer_carbs = NULL;
-TextLayer *graph_text_layer_insulin = NULL;
 TextLayer *graph_text_layer_populate = NULL;
-TextLayer *graph_text_layer_pumpsitechange = NULL;
-TextLayer *graph_text_layer_TempBasal = NULL;
+
 TextLayer *graph_text_layer_uploadresult = NULL;
-TextLayer *graph_text_layer_bg = NULL;
-TextLayer *graph_text_layer_combobolus = NULL;
-TextLayer* graph_text_layer_exercise = NULL;
-TextLayer* graph_text_layer_cgmsensor = NULL;
-TextLayer* graph_text_layer_insulinchange = NULL;
+
 //TextLayer* graph_text_layer_profileswitch = NULL;
-TextLayer* graph_text_layer_carbs_insulin = NULL;
 
 char messageresultwindow[100];
 
@@ -226,7 +222,6 @@ void uploadresult_load_window(Window * window)
     window_set_click_config_provider(uploadresult_window,(ClickConfigProvider)click_config_provider_uploadresult);
 }
 
-
 void uploadresult_unload_window(Window *window)
 {
    if(graph_text_layer_uploadresult)
@@ -247,6 +242,8 @@ void create_uploadresult_window()
                               );  
     window_stack_push(uploadresult_window, true);
 }
+
+
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "inbox_received_callback called!");
@@ -672,14 +669,14 @@ static void select_click_handler_carbs_insulin(ClickRecognizerRef recognizer, vo
 
 static void up_click_handler_carbs_insulin(ClickRecognizerRef recognizer, void *context) { 
 	 
-    Set_GraphText_layer_carbs_Insulin(graph_text_layer_carbs_insulin,carbs_insulin_index, UP);
+    Set_GraphText_layer_carbs_Insulin(activeLayer,carbs_insulin_index, UP);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_carbs_insulin: Exiting###");
 }
 
 
 static void down_click_handler_carbs_insulin(ClickRecognizerRef recognizer, void *context) {
    
-    Set_GraphText_layer_carbs_Insulin(graph_text_layer_carbs_insulin,carbs_insulin_index, DOWN);
+    Set_GraphText_layer_carbs_Insulin(activeLayer,carbs_insulin_index, DOWN);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_carbs_insulin: Exiting###");
 }
 
@@ -698,30 +695,23 @@ void carbs_insulin_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(carbs_insulin_window);
 #ifdef PBL_ROUND
-  graph_text_layer_carbs_insulin = text_layer_create(GRect(0, 60, 180, 170));
+  activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
-  graph_text_layer_carbs_insulin = text_layer_create(GRect(0, 20, 144, 170));
+  activeLayer = text_layer_create(GRect(0, 20, 144, 170));
 #endif
   //"Carbs: %d g \n Insulin: %d.%s units", icarbs, integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin)
-  Set_GraphText_layer_carbs_Insulin(graph_text_layer_carbs_insulin, carbs_insulin_index, INITIAL);
- // text_layer_set_text(graph_text_layer_carbs_insulin, "Carbs: 0g\nInsulin: 0.00 units");
-  text_layer_set_text_color(graph_text_layer_carbs_insulin, COL_DARK);
-  text_layer_set_background_color(graph_text_layer_carbs_insulin, COL_LIGHT);
-  text_layer_set_font(graph_text_layer_carbs_insulin, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(graph_text_layer_carbs_insulin, GTextAlignmentCenter);
-  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_carbs_insulin));
+  Set_GraphText_layer_carbs_Insulin(activeLayer, carbs_insulin_index, INITIAL);
+ // text_layer_set_text(activeLayer, "Carbs: 0g\nInsulin: 0.00 units");
+  text_layer_set_text_color(activeLayer, COL_DARK);
+  text_layer_set_background_color(activeLayer, COL_LIGHT);
+  text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
   window_set_click_config_provider(carbs_insulin_window,(ClickConfigProvider)click_config_provider_carbs_insulin);
    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###carbs_insulin_load_graph: Exiting###");
 }
 
-void carbs_insulin_unload_graph(Window *window) {
-   if(graph_text_layer_carbs_insulin)
-   {
-     text_layer_destroy(graph_text_layer_carbs_insulin);
-   }
-   window_destroy(carbs_insulin_window);
-}
 /////////////////////END OF CARBS AND INSULIN //////////////////////
 
 
@@ -770,14 +760,14 @@ static void select_click_handler_insulin(ClickRecognizerRef recognizer, void *co
 
 static void up_click_handler_insulin(ClickRecognizerRef recognizer, void *context) { 
 	 
-    Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, UP);
+    Set_GraphText_layer_Insulin(activeLayer,bIntegerPart_set, UP);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_insulin: : Exiting###");
 }
 
 
 static void down_click_handler_insulin(ClickRecognizerRef recognizer, void *context) {
    
-    Set_GraphText_layer_Insulin(graph_text_layer_insulin,bIntegerPart_set, DOWN);
+    Set_GraphText_layer_Insulin(activeLayer,bIntegerPart_set, DOWN);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_insulin: Exiting###");
 }
 
@@ -796,26 +786,18 @@ void insulin_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(insulin_window);
  #ifdef PBL_ROUND
-  graph_text_layer_insulin = text_layer_create(GRect(0, 75, 180, 27));
+  activeLayer = text_layer_create(GRect(0, 75, 180, 27));
 #else
-  graph_text_layer_insulin = text_layer_create(GRect(0, 20, 144, 27));
+  activeLayer = text_layer_create(GRect(0, 20, 144, 27));
 #endif  
-  text_layer_set_text(graph_text_layer_insulin, "Insulin: 0.00 units");
-  text_layer_set_text_color(graph_text_layer_insulin, COL_DARK);
-  text_layer_set_background_color(graph_text_layer_insulin, COL_LIGHT);
-  text_layer_set_font(graph_text_layer_insulin, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(graph_text_layer_insulin, GTextAlignmentCenter);
-  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_insulin));
+  text_layer_set_text(activeLayer, "Insulin: 0.00 units");
+  text_layer_set_text_color(activeLayer, COL_DARK);
+  text_layer_set_background_color(activeLayer, COL_LIGHT);
+  text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
   window_set_click_config_provider(insulin_window,(ClickConfigProvider)click_config_provider_insulin);
-}
-
-void insulin_unload_graph(Window *window) {
-   if(graph_text_layer_insulin)
-   {
-     text_layer_destroy(graph_text_layer_insulin);
-   }
-   window_destroy(insulin_window);
 }
 
 ////////////////////// CARBS WINDOW///////////////////////////////////////////////////////////
@@ -830,7 +812,7 @@ void Set_GraphText_layer_carbs(TextLayer* currentlayer, int increment)
 }
 
 static void up_click_handler_carbs(ClickRecognizerRef recognizer, void *context) { 
-  Set_GraphText_layer_carbs(graph_text_layer_carbs, UP);
+  Set_GraphText_layer_carbs(activeLayer, UP);
 	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_carbs: up_click_handler_carbs###");
 }
 
@@ -844,7 +826,7 @@ static void select_click_handler_carbs(ClickRecognizerRef recognizer, void *cont
 }
 
 static void down_click_handler_carbs(ClickRecognizerRef recognizer, void *context) {
-  Set_GraphText_layer_carbs(graph_text_layer_carbs, DOWN);
+  Set_GraphText_layer_carbs(activeLayer, DOWN);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_carbs: down_click_handler_carbs###");
 }
 
@@ -863,27 +845,18 @@ void carbs_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(carbs_window);
  #ifdef PBL_ROUND
-  graph_text_layer_carbs = text_layer_create(GRect(0, 75, 180, 37));
+  activeLayer = text_layer_create(GRect(0, 75, 180, 37));
  #else
- graph_text_layer_carbs = text_layer_create(GRect(0, 20, 144, 37));
+ activeLayer = text_layer_create(GRect(0, 20, 144, 37));
 #endif
-  text_layer_set_text_color(graph_text_layer_carbs, COL_DARK);
-  text_layer_set_text(graph_text_layer_carbs, "Carbs: 0 g");
-  text_layer_set_background_color(graph_text_layer_carbs, COL_LIGHT);
-  text_layer_set_font(graph_text_layer_carbs, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(graph_text_layer_carbs, GTextAlignmentCenter);
-  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_carbs));
+  text_layer_set_text_color(activeLayer, COL_DARK);
+  text_layer_set_text(activeLayer, "Carbs: 0 g");
+  text_layer_set_background_color(activeLayer, COL_LIGHT);
+  text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
   window_set_click_config_provider(carbs_window,(ClickConfigProvider)click_config_provider_carbs);
-}
-
-void carbs_unload_graph(Window *window) {
-  
-   if(graph_text_layer_carbs)
-   {
-     text_layer_destroy(graph_text_layer_carbs);
-   }
-   window_destroy(carbs_window);
 }
 
 
@@ -900,7 +873,7 @@ void Set_GraphText_layer_pumpsitechange(TextLayer* currentlayer, int change)
 }
 
 static void up_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void *context) { 
-  Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, UP);
+  Set_GraphText_layer_pumpsitechange(activeLayer, UP);
 	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_pumpsitechange: Exiting###");
 }
 
@@ -916,7 +889,7 @@ static void select_click_handler_pumpsitechange(ClickRecognizerRef recognizer, v
 }
 
 static void down_click_handler_pumpsitechange(ClickRecognizerRef recognizer, void *context) {
-  Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, DOWN);
+  Set_GraphText_layer_pumpsitechange(activeLayer, DOWN);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_pumpsitechange: Exiting###");
 }
 
@@ -934,29 +907,21 @@ void pumpsitechange_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(pumpsitechange_window);
 #ifdef PBL_ROUND
-  graph_text_layer_pumpsitechange = text_layer_create(GRect(0, 60, 180, 170));
+  activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
-  graph_text_layer_pumpsitechange = text_layer_create(GRect(0, 20, 144, 170));
+  activeLayer = text_layer_create(GRect(0, 20, 144, 170));
 #endif
  
-  Set_GraphText_layer_pumpsitechange(graph_text_layer_pumpsitechange, INITIAL);
-  text_layer_set_text_color(graph_text_layer_pumpsitechange, COL_DARK);
-  text_layer_set_background_color(graph_text_layer_pumpsitechange, COL_LIGHT);
-  text_layer_set_font(graph_text_layer_pumpsitechange, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(graph_text_layer_pumpsitechange, GTextAlignmentCenter);
-  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_pumpsitechange));
+  Set_GraphText_layer_pumpsitechange(activeLayer, INITIAL);
+  text_layer_set_text_color(activeLayer, COL_DARK);
+  text_layer_set_background_color(activeLayer, COL_LIGHT);
+  text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
   window_set_click_config_provider(pumpsitechange_window,(ClickConfigProvider)click_config_provider_pumpsitechange);
 }
 
-void pumpsitechange_unload_graph(Window *window) {
-   if(graph_text_layer_pumpsitechange)
-   {
-     text_layer_destroy(graph_text_layer_pumpsitechange);
-   }
-   pumpsiteindex =0;
-   window_destroy(pumpsitechange_window);
-}
 /////////////////////// END OF PUMP SITE CHANGE ///////////////////////////////
 
 ///////////////////// START OF TEMP BASAL ////////////////////////////////////
@@ -993,7 +958,7 @@ void Set_GraphText_layer_TempBasal(TextLayer* currentlayer, int change)
 static void up_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) { 
  
   SetTempBasalData(UP);  
-  Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, UP);
+  Set_GraphText_layer_TempBasal(activeLayer, UP);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_TempBasal: Exiting###");
 }
 
@@ -1018,7 +983,7 @@ static void select_click_handler_TempBasal(ClickRecognizerRef recognizer, void *
 
 static void down_click_handler_TempBasal(ClickRecognizerRef recognizer, void *context) {
   SetTempBasalData(DOWN);  
-  Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, DOWN);
+  Set_GraphText_layer_TempBasal(activeLayer, DOWN);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_TempBasal: Exiting###");
 }
 
@@ -1037,30 +1002,21 @@ void tempbasal_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(tempbasal_window);
 #ifdef PBL_ROUND
-  graph_text_layer_TempBasal = text_layer_create(GRect(0, 60, 180, 170));
+  activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
-  graph_text_layer_TempBasal = text_layer_create(GRect(0, 20, 144, 170));
+  activeLayer = text_layer_create(GRect(0, 20, 144, 170));
 #endif
-  Set_GraphText_layer_TempBasal(graph_text_layer_TempBasal, INITIAL);
+  Set_GraphText_layer_TempBasal(activeLayer, INITIAL);
   
-  text_layer_set_text_color(graph_text_layer_TempBasal, COL_DARK);
-  text_layer_set_background_color(graph_text_layer_TempBasal, COL_LIGHT);
-  text_layer_set_font(graph_text_layer_TempBasal, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(graph_text_layer_TempBasal, GTextAlignmentCenter);
-  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_TempBasal));
+  text_layer_set_text_color(activeLayer, COL_DARK);
+  text_layer_set_background_color(activeLayer, COL_LIGHT);
+  text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
   window_set_click_config_provider(tempbasal_window,(ClickConfigProvider)click_config_provider_TempBasal);
 }
 
-void tempbasal_unload_graph(Window *window) {
-   if(graph_text_layer_TempBasal)
-   {
-     text_layer_destroy(graph_text_layer_TempBasal);
-   } 
-  
-   ResetToDefaults();
-   window_destroy(tempbasal_window);
-}
 
 ///////////////////// END OF Temp Basal CHANGE ///////////////////////////////
 
@@ -1103,12 +1059,12 @@ static void select_click_handler_bg(ClickRecognizerRef recognizer, void *context
 }
 
 static void up_click_handler_bg(ClickRecognizerRef recognizer, void *context) { 
-    Set_GraphText_layer_bg(graph_text_layer_bg, UP);
+    Set_GraphText_layer_bg(activeLayer, UP);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_bg: Exiting###");
 }
 
 static void down_click_handler_bg(ClickRecognizerRef recognizer, void *context) {
-    Set_GraphText_layer_bg(graph_text_layer_bg, DOWN);
+    Set_GraphText_layer_bg(activeLayer, DOWN);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_bg: Exiting###");
 }
 
@@ -1126,9 +1082,9 @@ void bg_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(bg_window);
 #ifdef PBL_ROUND
-  graph_text_layer_bg = text_layer_create(GRect(0, 75, 180, 27));
+  activeLayer = text_layer_create(GRect(0, 75, 180, 27));
 #else
-  graph_text_layer_bg = text_layer_create(GRect(0, 20, 144, 27));
+  activeLayer = text_layer_create(GRect(0, 20, 144, 27));
 #endif
   static char s_packet_id_text[60];
   if(mmolsunits)
@@ -1140,23 +1096,16 @@ void bg_load_graph(Window *window) {
       snprintf(s_packet_id_text, sizeof(s_packet_id_text), "BG: %d %s", integerpart_bg, unitsused);
   }
 
-  text_layer_set_text(graph_text_layer_bg, s_packet_id_text);
-  text_layer_set_text_color(graph_text_layer_bg, COL_DARK);
-  text_layer_set_background_color(graph_text_layer_bg, COL_LIGHT);
-  text_layer_set_font(graph_text_layer_bg, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(graph_text_layer_bg, GTextAlignmentCenter);
-  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_bg));
+  text_layer_set_text(activeLayer, s_packet_id_text);
+  text_layer_set_text_color(activeLayer, COL_DARK);
+  text_layer_set_background_color(activeLayer, COL_LIGHT);
+  text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
   window_set_click_config_provider(bg_window,(ClickConfigProvider)click_config_provider_bg);
 }
 
-void bg_unload_graph(Window *window) {
-   if(graph_text_layer_bg)
-   {
-     text_layer_destroy(graph_text_layer_bg);
-   }
-   window_destroy(bg_window);
-}
 ////////////end of bg mmol window///////////////
 
 /////////// COMBO BOLUS WINDOW///////////////
@@ -1205,7 +1154,7 @@ void Set_GraphText_layer_combobolus(TextLayer* currentlayer, int change)
 }
 
 static void up_click_handler_combobolus(ClickRecognizerRef recognizer, void *context) {
-    Set_GraphText_layer_combobolus(graph_text_layer_combobolus, UP);
+    Set_GraphText_layer_combobolus(activeLayer, UP);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_combobolus: Exiting###");
 }
 
@@ -1237,7 +1186,7 @@ static void select_click_handler_combobolus(ClickRecognizerRef recognizer, void 
 }
 
 static void down_click_handler_combobolus(ClickRecognizerRef recognizer, void *context) {
-    Set_GraphText_layer_combobolus(graph_text_layer_combobolus,DOWN);
+    Set_GraphText_layer_combobolus(activeLayer,DOWN);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_combobolus: Exiting###");
 }
 
@@ -1255,29 +1204,20 @@ void combobolus_load_graph(Window *window) {
 
     window_layer_graph = window_get_root_layer(combobolus_window);
 #ifdef PBL_ROUND
-    graph_text_layer_combobolus = text_layer_create(GRect(0, 60, 180, 170));
+    activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
-    graph_text_layer_combobolus = text_layer_create(GRect(0, 20, 144, 170));
+    activeLayer = text_layer_create(GRect(0, 20, 144, 170));
 #endif
 
-    Set_GraphText_layer_combobolus(graph_text_layer_combobolus, INITIAL);
-    text_layer_set_text_color(graph_text_layer_combobolus, COL_DARK);
-    text_layer_set_background_color(graph_text_layer_combobolus, COL_LIGHT);
-    text_layer_set_font(graph_text_layer_combobolus, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-    text_layer_set_text_alignment(graph_text_layer_combobolus, GTextAlignmentCenter);
-    layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_combobolus));
+    Set_GraphText_layer_combobolus(activeLayer, INITIAL);
+    text_layer_set_text_color(activeLayer, COL_DARK);
+    text_layer_set_background_color(activeLayer, COL_LIGHT);
+    text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+    text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+    layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
 
     window_set_click_config_provider(combobolus_window,(ClickConfigProvider)click_config_provider_combobolus);
 
-}
-
-void combobolus_unload_graph(Window *window) {
-    if(graph_text_layer_combobolus)
-    {
-        text_layer_destroy(graph_text_layer_combobolus);
-    }
-
-    window_destroy(combobolus_window);
 }
 
 ////////////End of Combo Bolus Window
@@ -1308,7 +1248,7 @@ void Set_GraphText_layer_exercise(TextLayer* currentlayer, int change)
 }
 
 static void up_click_handler_exercise(ClickRecognizerRef recognizer, void *context) {
-    Set_GraphText_layer_exercise(graph_text_layer_exercise, UP);
+    Set_GraphText_layer_exercise(activeLayer, UP);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_exercise: Exiting###");
 }
 
@@ -1334,7 +1274,7 @@ static void select_click_handler_exercise(ClickRecognizerRef recognizer, void *c
 }
 
 static void down_click_handler_exercise(ClickRecognizerRef recognizer, void *context) {
-    Set_GraphText_layer_exercise(graph_text_layer_exercise,DOWN);
+    Set_GraphText_layer_exercise(activeLayer,DOWN);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_exercise: Exiting###");
 }
 
@@ -1353,30 +1293,23 @@ void exercise_load_graph(Window *window) {
 
     window_layer_graph = window_get_root_layer(exercise_window);
 #ifdef PBL_ROUND
-    graph_text_layer_exercise = text_layer_create(GRect(0, 60, 180, 170));
+    activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
-    graph_text_layer_exercise = text_layer_create(GRect(0, 20, 144, 170));
+    activeLayer = text_layer_create(GRect(0, 20, 144, 170));
 #endif
 
-    Set_GraphText_layer_exercise(graph_text_layer_exercise, INITIAL);
-    text_layer_set_text_color(graph_text_layer_exercise, COL_DARK);
-    text_layer_set_background_color(graph_text_layer_exercise, COL_LIGHT);
-    text_layer_set_font(graph_text_layer_exercise, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-    text_layer_set_text_alignment(graph_text_layer_exercise, GTextAlignmentCenter);
-    layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_exercise));
+    Set_GraphText_layer_exercise(activeLayer, INITIAL);
+    text_layer_set_text_color(activeLayer, COL_DARK);
+    text_layer_set_background_color(activeLayer, COL_LIGHT);
+    text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+    text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+    layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
 
     window_set_click_config_provider(exercise_window,(ClickConfigProvider)click_config_provider_exercise);
 
 }
 
-void exercise_unload_graph(Window *window) {
-    if(graph_text_layer_exercise)
-    {
-        text_layer_destroy(graph_text_layer_exercise);
-    }
 
-    window_destroy(exercise_window);
-}
 //////// CGM SENSOR ////////////////////////////////////////////////////////////////
 // returns the string of the new site location selection
 char* GetCGMSensorOption(int change)
@@ -1411,7 +1344,7 @@ void Set_GraphText_layer_cgmsensor(TextLayer* currentlayer, int change)
 }
 
 static void up_click_handler_cgmsensor(ClickRecognizerRef recognizer, void *context) { 
-  Set_GraphText_layer_cgmsensor(graph_text_layer_cgmsensor, UP);
+  Set_GraphText_layer_cgmsensor(activeLayer, UP);
 	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_cgmsensor: Exiting###");
 }
 
@@ -1427,7 +1360,7 @@ static void select_click_handler_cgmsensor(ClickRecognizerRef recognizer, void *
 }
 
 static void down_click_handler_cgmsensor(ClickRecognizerRef recognizer, void *context) {
-  Set_GraphText_layer_cgmsensor(graph_text_layer_cgmsensor, DOWN);
+  Set_GraphText_layer_cgmsensor(activeLayer, DOWN);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_cgmsensor: Exiting###");
 }
 
@@ -1446,29 +1379,21 @@ void cgmsensor_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(cgmsensor_window);
 #ifdef PBL_ROUND
-  graph_text_layer_cgmsensor = text_layer_create(GRect(0, 60, 180, 170));
+  activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
-  graph_text_layer_cgmsensor = text_layer_create(GRect(0, 20, 144, 170));
+  activeLayer = text_layer_create(GRect(0, 20, 144, 170));
 #endif
  
-  Set_GraphText_layer_cgmsensor(graph_text_layer_cgmsensor, INITIAL);
-  text_layer_set_text_color(graph_text_layer_cgmsensor, COL_DARK);
-  text_layer_set_background_color(graph_text_layer_cgmsensor, COL_LIGHT);
-  text_layer_set_font(graph_text_layer_cgmsensor, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(graph_text_layer_cgmsensor, GTextAlignmentCenter);
-  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_cgmsensor));
+  Set_GraphText_layer_cgmsensor(activeLayer, INITIAL);
+  text_layer_set_text_color(activeLayer, COL_DARK);
+  text_layer_set_background_color(activeLayer, COL_LIGHT);
+  text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
   window_set_click_config_provider(cgmsensor_window,(ClickConfigProvider)click_config_provider_cgmsensor);
 }
 
-void cgmsensor_unload_graph(Window *window) {
-   if(graph_text_layer_cgmsensor)
-   {
-     text_layer_destroy(graph_text_layer_cgmsensor);
-   }
-   cgmsensorindex =0;
-   window_destroy(cgmsensor_window);
-}
 /////////////////////// END OF CGM SENSOR ///////////////////////////////
 //////// INSULIN CHANGE ////////////////////////////////////////////////////////////////
 // returns the string of the new site location selection
@@ -1504,7 +1429,7 @@ void Set_GraphText_layer_insulinchange(TextLayer* currentlayer, int change)
 }
 
 static void up_click_handler_insulinchange(ClickRecognizerRef recognizer, void *context) { 
-  Set_GraphText_layer_insulinchange(graph_text_layer_insulinchange, UP);
+  Set_GraphText_layer_insulinchange(activeLayer, UP);
 	app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_insulinchange: Exiting###");
 }
 
@@ -1520,7 +1445,7 @@ static void select_click_handler_insulinchange(ClickRecognizerRef recognizer, vo
 }
 
 static void down_click_handler_insulinchange(ClickRecognizerRef recognizer, void *context) {
-  Set_GraphText_layer_insulinchange(graph_text_layer_insulinchange, DOWN);
+  Set_GraphText_layer_insulinchange(activeLayer, DOWN);
   app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_insulinchange: Exiting###");
 }
 
@@ -1539,30 +1464,38 @@ void insulinchange_load_graph(Window *window) {
   
   window_layer_graph = window_get_root_layer(insulinchange_window);
 #ifdef PBL_ROUND
-  graph_text_layer_insulinchange = text_layer_create(GRect(0, 60, 180, 170));
+  activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
-  graph_text_layer_insulinchange = text_layer_create(GRect(0, 20, 144, 170));
+  activeLayer = text_layer_create(GRect(0, 20, 144, 170));
 #endif
  
-  Set_GraphText_layer_insulinchange(graph_text_layer_insulinchange, INITIAL);
-  text_layer_set_text_color(graph_text_layer_insulinchange, COL_DARK);
-  text_layer_set_background_color(graph_text_layer_insulinchange, COL_LIGHT);
-  text_layer_set_font(graph_text_layer_insulinchange, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(graph_text_layer_insulinchange, GTextAlignmentCenter);
-  layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_insulinchange));
+  Set_GraphText_layer_insulinchange(activeLayer, INITIAL);
+  text_layer_set_text_color(activeLayer, COL_DARK);
+  text_layer_set_background_color(activeLayer, COL_LIGHT);
+  text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
   window_set_click_config_provider(insulinchange_window,(ClickConfigProvider)click_config_provider_insulinchange);
 }
 
-void insulinchange_unload_graph(Window *window) {
-   if(graph_text_layer_insulinchange)
+
+/////////////////////// END OF INSULIN CHANGE ///////////////////////////////
+
+void unloadActiveWindow(Window *window) {
+   if(activeLayer)
    {
-     text_layer_destroy(graph_text_layer_insulinchange);
+     text_layer_destroy(activeLayer);
    }
    insulinchangeindex = 0;
-   window_destroy(insulinchange_window);
+	pumpsiteindex =0;
+	   cgmsensorindex =0;
+
+	 ResetToDefaults();
+
+   window_destroy(window);
 }
-/////////////////////// END OF INSULIN CHANGE ///////////////////////////////
+
 
 //////// PROFILE SWITCH ////////////////////////////////////////////////////////////////
 // returns the string of the new site location selection
@@ -1661,127 +1594,49 @@ void profileswitch_unload_graph(Window *window) {
 ///////////////////////////// MAIN WINDOW /////////////////////////////////
 static void menu_select_callback(int index, void *ctx) {
   
-  if(index == 0)
+  WindowHandlers handlers = { .unload = unloadActiveWindow };
+  
+  switch(index)
   {
-      carbs_insulin_window = window_create();
-  	  window_set_window_handlers(carbs_insulin_window, 
-  							   (WindowHandlers){
-												.load   = carbs_insulin_load_graph,
-											  .unload = carbs_insulin_unload_graph,
-                                   }
-  							   );  
-  							  
-  	  window_stack_push(carbs_insulin_window, true);
+  	case 0:
+  		handlers.load = carbs_insulin_load_graph;
+  		break;
+  	case 1:
+  		handlers.load = carbs_load_graph;
+  		break;
+  	case 2:
+  		handlers.load = insulin_load_graph;
+  		break;
+  	case 3:
+  		handlers.load = tempbasal_load_graph;
+  		break;
+  	case 4:
+  		handlers.load = bg_load_graph;
+  		break;
+  	case 5:
+  		handlers.load = combobolus_load_graph;
+  		break;
+  	case 6:
+  		handlers.load = pumpsitechange_load_graph;
+  		break;
+  	case 7:
+  		handlers.load = exercise_load_graph;
+  		break;
+  	case 8:
+  		handlers.load = cgmsensor_load_graph;
+  		break;
+  	case 9:
+  		handlers.load = insulinchange_load_graph;
+  		break;
   }
-  else if(index == 1)
-  {
-      carbs_window = window_create();
-  	  window_set_window_handlers(carbs_window, 
-  							   (WindowHandlers){
-												.load   = carbs_load_graph,
-											  .unload = carbs_unload_graph,
-								   }
-  							   );  
-  							  
-  	  window_stack_push(carbs_window, true);
-  }
-  else if(index == 2)
-  {
-        insulin_window = window_create();
-    	  window_set_window_handlers(insulin_window, 
-    							   (WindowHandlers){
-													.load   = insulin_load_graph,
-												  .unload = insulin_unload_graph,
-                                     }
-    							   );  
-    							  
-    	  window_stack_push(insulin_window, true);
-  }
-  else if(index == 3)
-  {
-        tempbasal_window = window_create();
-    	  window_set_window_handlers(tempbasal_window, 
-    							   (WindowHandlers){
-													.load   = tempbasal_load_graph,
-												  .unload = tempbasal_unload_graph,
-                                     }
-    							   );  
-    							  
-    	  window_stack_push(tempbasal_window, true);
-  } 
-  else if(index == 4)
-  {
-        bg_window = window_create();
-    	  window_set_window_handlers(bg_window, 
-    							   (WindowHandlers){
-													.load   = bg_load_graph,
-												  .unload = bg_unload_graph,
-                                     }
-    							   );  
-    							  
-    	  window_stack_push(bg_window, true);
-  }
-  else if(index == 5)
+    
+    if (handlers.load)
     {
-        combobolus_window = window_create();
-        window_set_window_handlers(combobolus_window, 
-            (WindowHandlers){
-                .load   = combobolus_load_graph,
-                    .unload = combobolus_unload_graph,
-        }
-        );  
-
-        window_stack_push(combobolus_window, true);
-
+       	activeWindow = window_create();
+   		window_set_window_handlers(activeWindow, handlers);
+        window_stack_push(activeWindow, true);
     }
-  else if(index == 6)
-  {
-        pumpsitechange_window = window_create();
-        window_set_window_handlers(pumpsitechange_window, 
-            (WindowHandlers){
-                .load   = pumpsitechange_load_graph,
-                    .unload = pumpsitechange_unload_graph,
-        }
-        );  
-
-        window_stack_push(pumpsitechange_window, true);
-    }
-  else if(index == 7)
-  {
-    exercise_window = window_create();
-        window_set_window_handlers(exercise_window, 
-            (WindowHandlers){
-                .load   = exercise_load_graph,
-                    .unload = exercise_unload_graph,
-        }
-        );  
-
-        window_stack_push(exercise_window, true);
-  }
-  else if(index == 8)
-  {
-        cgmsensor_window = window_create();
-        window_set_window_handlers(cgmsensor_window, 
-            (WindowHandlers){
-                .load   = cgmsensor_load_graph,
-                    .unload = cgmsensor_unload_graph,
-        }
-        );  
-
-        window_stack_push(cgmsensor_window, true);
-    }  
-   else if(index == 9)
-   {
-        insulinchange_window = window_create();
-        window_set_window_handlers(insulinchange_window, 
-            (WindowHandlers){
-                .load   = insulinchange_load_graph,
-                    .unload = insulinchange_unload_graph,
-        }
-        );  
-
-        window_stack_push(insulinchange_window, true);
-    }  
+    
 //   else if(index == 10)
 //  {
 //        profileswitch_window = window_create();
@@ -1799,47 +1654,27 @@ static void menu_select_callback(int index, void *ctx) {
 static void main_window_load(Window *window) {
     int num_a_items = 0;
 
-	s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Carbs and Insulin",
+	char menuItems[][17] = {
+		"Carbs and Insulin",
+		"Carbs",
+		"Insulin",
+		"Temp Basal",
+		"Blood Glucose",
+		"Combo Bolus",
+		"Pump Site Change",
+		"Exercise",
+		"CGM Sensor",
+		"Insulin Change"};
+
+	size_t i = 0;
+	for( i = 0; i < sizeof(menuItems) / sizeof(menuItems[0]); i++)
+	{
+	    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
+        	.title = menuItems[i],
             .callback = menu_select_callback,
-    };
-	
-    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Carbs",
-            .callback = menu_select_callback,
-    };
-    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Insulin",
-            .callback = menu_select_callback,
-    };
-    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Temp Basal",
-            .callback = menu_select_callback,
-    };
-    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Blood Glucose",
-            .callback = menu_select_callback,
-    };
-    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Combo Bolus",
-            .callback = menu_select_callback,
-    };
-    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Pump Site Change",
-            .callback = menu_select_callback,
-    };
-    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Exercise",
-            .callback = menu_select_callback,
-    };
-    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "CGM Sensor",
-            .callback = menu_select_callback,
-    };
-    s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
-        .title = "Insulin Change",
-            .callback = menu_select_callback,
-    };
+	    };
+	}
+
 //	s_first_menu_items[num_a_items++] = (SimpleMenuItem) {
 //        .title = "Profile Switch",
 //            .callback = menu_select_callback,
