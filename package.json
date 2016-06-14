@@ -24,7 +24,8 @@
       "PERCENT": 12,
       "SPLITEXT": 17,
       "SPLITNOW": 16,
-      "SUCCESS": 10
+      "SUCCESS": 10,
+      "TEMPTARGET": 21
     },
     "projectType": "native",
     "resources": {

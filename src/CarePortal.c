@@ -7,7 +7,7 @@ char version[20];
 
 //https://github.com/pebble-examples/feature-simple-menu-layer
 #define NUM_MENU_SECTIONS 2
-#define NUM_FIRST_MENU_ITEMS 11
+#define NUM_FIRST_MENU_ITEMS 12
 #define NUM_SECOND_MENU_ITEMS 1
 
 #define KEY_DATA 5
@@ -26,6 +26,7 @@ char version[20];
 #define PROFILE 18
 #define INSULIN_INCREMENT 19
 #define CARBS 20
+#define TEMPTARGET 21
 
 #define MMOL_INTEGER_DEFAULT 5
 #define MMOL_FRACTIONAL_DEFAULT 6
@@ -41,22 +42,8 @@ char version[20];
 #define INITIAL 0
 
 static Window *s_main_window = NULL;
-static Window *carbs_window = NULL;
-static Window *insulin_window = NULL;
-static Window *populate_window = NULL;
-static Window *pumpsitechange_window = NULL;
-static Window *tempbasal_window = NULL;
-static Window *uploadresult_window = NULL;
-static Window *bg_window = NULL;
-static Window *combobolus_window = NULL;
-static Window *exercise_window = NULL;
-static Window *cgmsensor_window = NULL;
-static Window *insulinchange_window = NULL;
 //static Window *profileswitch_window = NULL;
-static Window *carbs_insulin_window = NULL;
 
-
-static Window *activeWindow = NULL;
 TextLayer *activeLayer = NULL;
 
 static SimpleMenuLayer *s_simple_menu_layer;
@@ -103,10 +90,15 @@ int integerpart_insulin = 0;
 int fractionalpart_insulin = 0;
 int icarbs = 0;
 int percentage = 0;
+int tempTarget = 80;
 
 // Temp Basal
 int iBasalindex = 0; //0 - percentage, 1 - hrs 2- mins
 char TempBasal[150];
+
+// Temp Target
+int iTargetindex = 0; //0 - percentage, 1 - hrs 2- mins
+char TempTarget[150];
 
 // for setting insulin numbers - maybe add _insulin to the end.
 bool bIntegerPart_set = false;  
@@ -206,7 +198,7 @@ void uploadresult_load_window(Window * window)
     APP_LOG(APP_LOG_LEVEL_INFO, "uploadresult_load_window called!");
     Layer *window_layer_graph = NULL;
     
-    window_layer_graph = window_get_root_layer(uploadresult_window);
+    window_layer_graph = window_get_root_layer(window);
   #ifdef PBL_ROUND
       graph_text_layer_uploadresult = text_layer_create(GRect(0, 60, 180, 144));
   #else
@@ -219,7 +211,7 @@ void uploadresult_load_window(Window * window)
     text_layer_set_text_alignment(graph_text_layer_uploadresult, GTextAlignmentCenter);
     layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_uploadresult));
     
-    window_set_click_config_provider(uploadresult_window,(ClickConfigProvider)click_config_provider_uploadresult);
+    window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_uploadresult);
 }
 
 void uploadresult_unload_window(Window *window)
@@ -228,12 +220,12 @@ void uploadresult_unload_window(Window *window)
    {
      text_layer_destroy(graph_text_layer_uploadresult);
    }
-  window_destroy(uploadresult_window);
+  window_destroy(window);
 }
 
 void create_uploadresult_window()
 {
-    uploadresult_window = window_create();
+    Window *uploadresult_window = window_create();
     window_set_window_handlers(uploadresult_window, 
                                (WindowHandlers){
                                  .load   = uploadresult_load_window,
@@ -443,6 +435,8 @@ void ResetToDefaults()
   // Temp Basal
   iBasalindex = 0;
   
+  iTargetindex = 0;
+  
   // reset memory allocation and initialise back to zero length
   memset(duration, 0, sizeof(duration));
   memset(percent, 0, sizeof(percent));
@@ -527,6 +521,11 @@ void select_click_handler_populate(ClickRecognizerRef recognizer, void *context)
         {
             dict_write_cstring(iter, GLUCOSE, &bgresult[0]);
         }
+
+        if(strlen(TempTarget) != 0)
+        {
+            dict_write_cstring(iter, TEMPTARGET, &TempTarget[0]);
+        }
         
         if(strlen(insulin) != 0)
         {
@@ -571,7 +570,7 @@ void populate_load_window(Window * window)
 {
     Layer *window_layer_graph = NULL;
     
-    window_layer_graph = window_get_root_layer(populate_window);
+    window_layer_graph = window_get_root_layer(window);
   #ifdef PBL_ROUND
     graph_text_layer_populate = text_layer_create(GRect(0, 60, 180, 144));
   #else
@@ -584,7 +583,7 @@ void populate_load_window(Window * window)
     text_layer_set_text_alignment(graph_text_layer_populate, GTextAlignmentCenter);
     layer_add_child(window_layer_graph, text_layer_get_layer(graph_text_layer_populate));
     
-    window_set_click_config_provider(populate_window,(ClickConfigProvider)click_config_provider_populate);
+    window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_populate);
 }
 
 
@@ -594,13 +593,13 @@ void populate_unload_window(Window *window)
    {
      text_layer_destroy(graph_text_layer_populate);
    }
-  window_destroy(populate_window);
+  window_destroy(window);
   
 }
 
 void create_populate_window()
 {
-   populate_window = window_create();
+   Window *populate_window = window_create();
     	  window_set_window_handlers(populate_window, 
     							   (WindowHandlers){
 												.load   = populate_load_window,
@@ -693,7 +692,7 @@ void carbs_insulin_load_graph(Window *window) {
   ResetToDefaults();
   Layer *window_layer_graph = NULL;
   
-  window_layer_graph = window_get_root_layer(carbs_insulin_window);
+  window_layer_graph = window_get_root_layer(window);
 #ifdef PBL_ROUND
   activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
@@ -708,7 +707,7 @@ void carbs_insulin_load_graph(Window *window) {
   text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
-  window_set_click_config_provider(carbs_insulin_window,(ClickConfigProvider)click_config_provider_carbs_insulin);
+  window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_carbs_insulin);
    app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###carbs_insulin_load_graph: Exiting###");
 }
 
@@ -784,7 +783,7 @@ void insulin_load_graph(Window *window) {
   ResetToDefaults();
   Layer *window_layer_graph = NULL;
   
-  window_layer_graph = window_get_root_layer(insulin_window);
+  window_layer_graph = window_get_root_layer(window);
  #ifdef PBL_ROUND
   activeLayer = text_layer_create(GRect(0, 75, 180, 27));
 #else
@@ -797,7 +796,7 @@ void insulin_load_graph(Window *window) {
   text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
-  window_set_click_config_provider(insulin_window,(ClickConfigProvider)click_config_provider_insulin);
+  window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_insulin);
 }
 
 ////////////////////// CARBS WINDOW///////////////////////////////////////////////////////////
@@ -843,7 +842,7 @@ void carbs_load_graph(Window *window) {
   ResetToDefaults();
   Layer *window_layer_graph = NULL;
   
-  window_layer_graph = window_get_root_layer(carbs_window);
+  window_layer_graph = window_get_root_layer(window);
  #ifdef PBL_ROUND
   activeLayer = text_layer_create(GRect(0, 75, 180, 37));
  #else
@@ -856,7 +855,7 @@ void carbs_load_graph(Window *window) {
   text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
-  window_set_click_config_provider(carbs_window,(ClickConfigProvider)click_config_provider_carbs);
+  window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_carbs);
 }
 
 
@@ -905,7 +904,7 @@ void pumpsitechange_load_graph(Window *window) {
   ResetToDefaults();
   Layer *window_layer_graph = NULL;
   
-  window_layer_graph = window_get_root_layer(pumpsitechange_window);
+  window_layer_graph = window_get_root_layer(window);
 #ifdef PBL_ROUND
   activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
@@ -919,7 +918,7 @@ void pumpsitechange_load_graph(Window *window) {
   text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
-  window_set_click_config_provider(pumpsitechange_window,(ClickConfigProvider)click_config_provider_pumpsitechange);
+  window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_pumpsitechange);
 }
 
 /////////////////////// END OF PUMP SITE CHANGE ///////////////////////////////
@@ -1000,7 +999,7 @@ void tempbasal_load_graph(Window *window) {
   ResetToDefaults();
   Layer *window_layer_graph = NULL;
   
-  window_layer_graph = window_get_root_layer(tempbasal_window);
+  window_layer_graph = window_get_root_layer(window);
 #ifdef PBL_ROUND
   activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
@@ -1014,11 +1013,110 @@ void tempbasal_load_graph(Window *window) {
   text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
-  window_set_click_config_provider(tempbasal_window,(ClickConfigProvider)click_config_provider_TempBasal);
+  window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_TempBasal);
 }
 
 
 ///////////////////// END OF Temp Basal CHANGE ///////////////////////////////
+
+
+
+///////////////////// START OF TEMP TARGET ////////////////////////////////////
+void SetTempTarget(int change)
+{
+    if(iTargetindex == 0)
+    {
+      tempTarget += percentage_increment * change;
+      if(tempTarget < 70)
+        tempTarget = 70;
+      else if (tempTarget > 200)
+        tempTarget = 200;
+    }
+	else if(iTargetindex == 1)
+	{
+		SetHours(&hrs, change);
+	}
+    else if(iTargetindex == 2)
+    {
+        SetMinutes(&minutes, change);
+    }
+}
+
+void Set_GraphText_layer_TempTarget(TextLayer* currentlayer, int change)
+{
+  static char s_packet_id_text[50];
+ 
+  snprintf(s_packet_id_text, sizeof(s_packet_id_text), "TempTarget: %d \n for %d hrs %d mins", tempTarget, hrs, minutes);
+
+  text_layer_set_text(currentlayer, s_packet_id_text);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###Set_GraphText_layer_TempTarget: Exiting###");
+}
+
+static void up_click_handler_TempTarget(ClickRecognizerRef recognizer, void *context) { 
+ 
+  SetTempTarget(UP);  
+  Set_GraphText_layer_TempTarget(activeLayer, UP);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###up_click_handler_TempTarget: Exiting###");
+}
+
+static void select_click_handler_TempTarget(ClickRecognizerRef recognizer, void *context) {
+    
+  if(iTargetindex < 2)
+  {
+      iTargetindex += 1;
+  }
+  else
+  {
+      snprintf(outputtext, sizeof(outputtext), "You are adding 'TempTarget' %d for %d hrs %d mins to Care Portal.", tempTarget, hrs, minutes);
+      snprintf(keyname, sizeof(keyname), "notes");
+      snprintf(resultvalue, sizeof(resultvalue), "Temp Target %d for %d hrs %d mins.", percentage, hrs, minutes);
+      snprintf(eventtype,sizeof(eventtype), "Temporary Target");
+      snprintf(duration,sizeof(duration), "%d",(hrs * 60) + minutes );
+      snprintf(TempTarget,sizeof(TempTarget), "%d", tempTarget);
+    
+      create_populate_window();
+  }
+}
+
+static void down_click_handler_TempTarget(ClickRecognizerRef recognizer, void *context) {
+  SetTempTarget(DOWN);  
+  Set_GraphText_layer_TempTarget(activeLayer, DOWN);
+  app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "###down_click_handler_TempTarget: Exiting###");
+}
+
+
+static void click_config_provider_TempTarget(void *context) {
+  // Register the ClickHandlers
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler_TempTarget);
+  window_single_repeating_click_subscribe(BUTTON_ID_UP, 100, up_click_handler_TempTarget);
+  window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 100, down_click_handler_TempTarget);
+}
+
+void temptarget_load_graph(Window *window) {
+  
+  ResetToDefaults();
+  Layer *window_layer_graph = NULL;
+  
+  window_layer_graph = window_get_root_layer(window);
+#ifdef PBL_ROUND
+  activeLayer = text_layer_create(GRect(0, 60, 180, 170));
+#else
+  activeLayer = text_layer_create(GRect(0, 20, 144, 170));
+#endif
+  Set_GraphText_layer_TempTarget(activeLayer, INITIAL);
+  
+  text_layer_set_text_color(activeLayer, COL_DARK);
+  text_layer_set_background_color(activeLayer, COL_LIGHT);
+  text_layer_set_font(activeLayer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
+  layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
+  
+  window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_TempTarget);
+}
+
+
+///////////////////// END OF Temp TARGET CHANGE ///////////////////////////////
+
 
 ///////////////////// Start of glucose //////////////////////
 
@@ -1080,7 +1178,7 @@ void bg_load_graph(Window *window) {
   ResetToDefaults();
   Layer *window_layer_graph = NULL;
   
-  window_layer_graph = window_get_root_layer(bg_window);
+  window_layer_graph = window_get_root_layer(window);
 #ifdef PBL_ROUND
   activeLayer = text_layer_create(GRect(0, 75, 180, 27));
 #else
@@ -1103,7 +1201,7 @@ void bg_load_graph(Window *window) {
   text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
-  window_set_click_config_provider(bg_window,(ClickConfigProvider)click_config_provider_bg);
+  window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_bg);
 }
 
 ////////////end of bg mmol window///////////////
@@ -1202,7 +1300,7 @@ void combobolus_load_graph(Window *window) {
     ResetToDefaults();
     Layer *window_layer_graph = NULL;
 
-    window_layer_graph = window_get_root_layer(combobolus_window);
+    window_layer_graph = window_get_root_layer(window);
 #ifdef PBL_ROUND
     activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
@@ -1216,7 +1314,7 @@ void combobolus_load_graph(Window *window) {
     text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
     layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
 
-    window_set_click_config_provider(combobolus_window,(ClickConfigProvider)click_config_provider_combobolus);
+    window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_combobolus);
 
 }
 
@@ -1291,7 +1389,7 @@ void exercise_load_graph(Window *window) {
     ResetToDefaults();
     Layer *window_layer_graph = NULL;
 
-    window_layer_graph = window_get_root_layer(exercise_window);
+    window_layer_graph = window_get_root_layer(window);
 #ifdef PBL_ROUND
     activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
@@ -1305,7 +1403,7 @@ void exercise_load_graph(Window *window) {
     text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
     layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
 
-    window_set_click_config_provider(exercise_window,(ClickConfigProvider)click_config_provider_exercise);
+    window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_exercise);
 
 }
 
@@ -1377,7 +1475,7 @@ void cgmsensor_load_graph(Window *window) {
   ResetToDefaults();
   Layer *window_layer_graph = NULL;
   
-  window_layer_graph = window_get_root_layer(cgmsensor_window);
+  window_layer_graph = window_get_root_layer(window);
 #ifdef PBL_ROUND
   activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
@@ -1391,10 +1489,11 @@ void cgmsensor_load_graph(Window *window) {
   text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
-  window_set_click_config_provider(cgmsensor_window,(ClickConfigProvider)click_config_provider_cgmsensor);
+  window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_cgmsensor);
 }
 
 /////////////////////// END OF CGM SENSOR ///////////////////////////////
+
 //////// INSULIN CHANGE ////////////////////////////////////////////////////////////////
 // returns the string of the new site location selection
 char* GetInsulinChange(int change)
@@ -1414,8 +1513,6 @@ char* GetInsulinChange(int change)
    snprintf(insulinchange_change, sizeof(insulinchange_change), "%s", insulinchangeoptions[insulinchangeindex]);
    return insulinchange_change;
 }
-
-
 
 void Set_GraphText_layer_insulinchange(TextLayer* currentlayer, int change)
 {
@@ -1462,7 +1559,7 @@ void insulinchange_load_graph(Window *window) {
   ResetToDefaults();
   Layer *window_layer_graph = NULL;
   
-  window_layer_graph = window_get_root_layer(insulinchange_window);
+  window_layer_graph = window_get_root_layer(window);
 #ifdef PBL_ROUND
   activeLayer = text_layer_create(GRect(0, 60, 180, 170));
 #else
@@ -1476,7 +1573,7 @@ void insulinchange_load_graph(Window *window) {
   text_layer_set_text_alignment(activeLayer, GTextAlignmentCenter);
   layer_add_child(window_layer_graph, text_layer_get_layer(activeLayer));
   
-  window_set_click_config_provider(insulinchange_window,(ClickConfigProvider)click_config_provider_insulinchange);
+  window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_insulinchange);
 }
 
 
@@ -1628,11 +1725,16 @@ static void menu_select_callback(int index, void *ctx) {
   	case 9:
   		handlers.load = insulinchange_load_graph;
   		break;
+  	case 10:
+  		handlers.load = temptarget_load_graph;
+  		break;
   }
+    
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "menu_select_callback %d", index);
     
     if (handlers.load)
     {
-       	activeWindow = window_create();
+       	Window *activeWindow = window_create();
    		window_set_window_handlers(activeWindow, handlers);
         window_stack_push(activeWindow, true);
     }
@@ -1654,7 +1756,7 @@ static void menu_select_callback(int index, void *ctx) {
 static void main_window_load(Window *window) {
     int num_a_items = 0;
 
-	char menuItems[][17] = {
+	const char *menuItems[] = {
 		"Carbs and Insulin",
 		"Carbs",
 		"Insulin",
@@ -1664,7 +1766,8 @@ static void main_window_load(Window *window) {
 		"Pump Site Change",
 		"Exercise",
 		"CGM Sensor",
-		"Insulin Change"};
+		"Insulin Change",
+		"Temp Target"};
 
 	size_t i = 0;
 	for( i = 0; i < sizeof(menuItems) / sizeof(menuItems[0]); i++)

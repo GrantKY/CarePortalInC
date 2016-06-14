@@ -140,11 +140,18 @@ function MongoDBContents(e, enteredBy, units)
     var insulin = e.payload.INSULIN;
     var splitnow = e.payload.SPLITNOW;
     var splitext = e.payload.SPLITEXT;
+    var temptarget = e.payload.TEMPTARGET;
   
     var contents = {
       "enteredBy" : enteredBy,
       "eventType" : eventtype,
     };
+  
+  	if (temptarget !== undefined && temptarget !== null)
+  	{
+  		contents["targetTop"] = parseFloat(temptarget);
+  		contents["targetBottom"] = parseFloat(temptarget);
+  	}
   
     if (name !== undefined && name !== null)
     {
