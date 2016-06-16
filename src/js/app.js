@@ -1,88 +1,216 @@
-/**
- * Welcome to Pebble.js!
- *
- * This is where you write your app.
- */
+// Removed the auto codes and replace with configuration screen  below
 
-var UI = require('ui');
-var Vector2 = require('vector2');
+// adding configuration screen for the units, secret key, web URL and Pebble name
+Pebble.addEventListener("showConfiguration", function(e) {
+                        console.log("Showing Configuration", JSON.stringify(e));
+  Pebble.openURL('http://sulkaharo.github.io/pebble_carelink_config.html');
+                        });
 
-var main = new UI.Card({
-  title: 'Pebble.js',
-  icon: 'images/menu_icon.png',
-  subtitle: 'Hello World!',
-  body: 'Press any button.',
-  subtitleColor: 'indigo', // Named colors
-  bodyColor: '#9a0036' // Hex colors
-});
+Pebble.addEventListener("webviewclosed", function(e) {
+                        var opts = JSON.parse(decodeURIComponent(e.response));
+                        console.log("CLOSE CONFIG OPTIONS = " + JSON.stringify(opts));
+                        // store configuration in local storage
+                        localStorage.setItem('portalPebble', JSON.stringify(opts));    
+                        var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, TEMPTARGET: opts.temptarget},
+                                            function(e) {
+                                                         console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
+                                                         },
+                                             function(e) {
+                                                         console.log('Unable to deliver message with transactionId='+ e.data.transactionId + ' Error is: ' + e.error.message);
+                                            });
+                        console.log("transactionid: " + transactionid);
+                        });
 
-main.show();
+Pebble.addEventListener('ready',
+  function(e) {
+    console.log('JavaScript app ready and running!');
+    var opts = [ ].slice.call(arguments).pop( );
+    opts = JSON.parse(localStorage.getItem('portalPebble'));  
+    var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, TEMPTARGET: opts.temptarget},
+          function(e) {
+                        console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
+                      },
+          function(e) {
+                        console.log('Unable to deliver message with transactionId='+ e.data.transactionId + ' Error is: ' + e.error.message);
+                      });
+    console.log("transactionid: " + transactionid);
+  }
+);
 
-main.on('click', 'up', function(e) {
-  var menu = new UI.Menu({
-    sections: [{
-      items: [{
-        title: 'Pebble.js',
-        icon: 'images/menu_icon.png',
-        subtitle: 'Can do Menus'
-      }, {
-        title: 'Second Item',
-        subtitle: 'Subtitle Text'
-      }, {
-        title: 'Third Item',
-      }, {
-        title: 'Fourth Item',
-      }]
-    }]
-  });
-  menu.on('select', function(e) {
-    console.log('Selected item #' + e.itemIndex + ' of section #' + e.sectionIndex);
-    console.log('The item is titled "' + e.item.title + '"');
-  });
-  menu.show();
-});
+Pebble.addEventListener('appmessage',
+  function(e) {
+    console.log('Treatment being sent');
+    console.log(JSON.stringify(e.payload));
+  
+    // check for configuration data
+    var message;
+    //get options from configuration window
 
-main.on('click', 'select', function(e) {
-  var wind = new UI.Window({
-    backgroundColor: 'black'
-  });
-  var radial = new UI.Radial({
-    size: new Vector2(140, 140),
-    angle: 0,
-    angle2: 300,
-    radius: 20,
-    backgroundColor: 'cyan',
-    borderColor: 'celeste',
-    borderWidth: 1,
-  });
-  var textfield = new UI.Text({
-    size: new Vector2(140, 60),
-    font: 'gothic-24-bold',
-    text: 'Dynamic\nWindow',
-    textAlign: 'center'
-  });
-  var windSize = wind.size();
-  // Center the radial in the window
-  var radialPos = radial.position()
-      .addSelf(windSize)
-      .subSelf(radial.size())
-      .multiplyScalar(0.5);
-  radial.position(radialPos);
-  // Center the textfield in the window
-  var textfieldPos = textfield.position()
-      .addSelf(windSize)
-      .subSelf(textfield.size())
-      .multiplyScalar(0.5);
-  textfield.position(textfieldPos);
-  wind.add(radial);
-  wind.add(textfield);
-  wind.show();
-});
+    var opts = [ ].slice.call(arguments).pop( );
+    opts = JSON.parse(localStorage.getItem('portalPebble'));
 
-main.on('click', 'down', function(e) {
-  var card = new UI.Card();
-  card.title('A Card');
-  card.subtitle('Is a Window');
-  card.body('The simplest window type in Pebble.js.');
-  card.show();
-});
+    console.log(opts);
+	  // check if endpoint exists
+    if (!opts.endpoint) {
+        // endpoint doesn't exist, return no endpoint to watch
+		// " " (space) shows these are init values, not bad or null values
+        message = {
+          endpoint: " ",
+          pebblename: " ",
+          secretAPI: " ",
+          units: " ",
+          hashAPI: " ",
+        };
+        
+        console.log("NO ENDPOINT JS message", JSON.stringify(message));
+        Pebble.sendAppMessage(JSON.stringify(message));
+        return;   
+    }
+    
+    var contents = MongoDBContents(e, opts.pebblename, opts.units);
+    PostTreatment(contents, opts.endpoint, opts.hashAPI);
+  }
+);
+
+function AddTempBasalDetails(contents, duration, percent)
+{
+  if(isNumber(duration))
+  {
+    contents.duration = parseFloat(duration);
+  }
+  
+  if(isNumber(percent))
+  {
+    contents.percent = parseFloat(percent);
+  }
+  
+  return contents;  
+}
+
+function AddBGData(contents, currentglucose, bg_units)
+{
+  if(isNumber(currentglucose))
+  {
+    contents.glucose = parseFloat(currentglucose);
+    contents.units = bg_units;
+    contents.glucoseType = "Finger"; 
+  }
+  
+  return contents;  
+}
+
+function AddComboBolous(contents, enteredinsulin, splitnow, splitext)
+{
+  
+  if(isNumber(enteredinsulin))
+  {
+     var upfrontinsulin = 0.0;
+     if(parseFloat(splitnow) !== 0)
+     {
+        console.log("splitnow" + splitnow);
+        upfrontinsulin = (parseFloat(splitnow) / 100) * parseFloat(enteredinsulin);   
+        
+     }
+    
+      contents.insulin = upfrontinsulin.toFixed(3);
+      contents.relative = (parseFloat(enteredinsulin) - upfrontinsulin).toFixed(3);
+      contents.enteredinsulin = enteredinsulin;
+      contents.splitNow = splitnow;
+      contents.splitExt = splitext; 
+  }
+  
+  return contents;  
+}
+
+
+function isNumber(obj)
+{ 
+  return !isNaN(parseFloat(obj));
+}
+
+//https://ninedof.wordpress.com/2014/02/02/pebble-sdk-2-0-tutorial-6-appmessage-for-pebblekit-js/
+function MongoDBContents(e, enteredBy, units)
+{
+    var name = e.payload.KEY_DATA; 
+    var result =  e.payload.KEY_VALUE;
+    var eventtype = e.payload.KEY_EVENTTYPE;
+    var duration = e.payload.DURATION;
+    var percent = e.payload.PERCENT;
+    var glucose = e.payload.GLUCOSE;
+    var insulin = e.payload.INSULIN;
+    var splitnow = e.payload.SPLITNOW;
+    var splitext = e.payload.SPLITEXT;
+    var temptarget = e.payload.TEMPTARGET;
+  
+    var contents = {
+      "enteredBy" : enteredBy,
+      "eventType" : eventtype,
+    };
+  
+  	if (temptarget !== undefined && temptarget !== null)
+  	{
+  		contents["targetTop"] = parseFloat(temptarget);
+  		contents["targetBottom"] = parseFloat(temptarget);
+  	}
+  
+    if (name !== undefined && name !== null)
+    {
+        contents[name.toLowerCase()] = result;
+    }  
+
+//  Add Temp Basal Info
+    if (duration !== undefined && duration !== null)
+    {
+      contents = AddTempBasalDetails(contents, duration, percent);
+    }
+  
+     // Add Glucose Level info
+    if (glucose !== undefined && glucose !== null)
+    {
+      contents = AddBGData(contents, glucose, units);
+    }
+    
+  // Combo Bolus
+  
+    if(splitnow !== undefined && splitnow !== null)
+    {
+         contents = AddComboBolous(contents, insulin, splitnow, splitext);
+    }
+  
+    return contents;
+}
+
+
+function PostTreatment(contents, endpoint, hashAPI) {
+    var weburl = endpoint;
+    var secret_key = hashAPI;
+
+    console.log('Posting Treatment log');
+    console.log(JSON.stringify(contents));
+    var http = new XMLHttpRequest();
+    http.open("POST", weburl, true);  
+    
+    http.setRequestHeader("API-SECRET", secret_key);    
+    http.setRequestHeader("Content-type", 'application/json');
+    http.setRequestHeader('Accept', 'application/json');
+
+    http.onload = function () 
+    {
+        // do something to response
+        console.log("http.onload - ----Status:", http.status);
+  
+        if ( http.status != 200)
+        {
+            console.log("ERROR --------------------");
+            Pebble.sendAppMessage({ ERROR: "Error not able to connect to web site"});
+          }
+        else
+        {
+          console.log("SUCCESS --------------------");
+            Pebble.sendAppMessage({ SUCCESS: "Message send successfully to website."});
+
+        }
+    };
+  
+    http.send(JSON.stringify(contents));
+  }

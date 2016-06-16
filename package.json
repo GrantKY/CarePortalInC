@@ -4,7 +4,7 @@
   "keywords": [
     "pebble-app"
   ],
-  "name": "Care Portal",
+  "name": "OAPS Care Portal",
   "pebble": {
     "capabilities": [
       "configurable"
@@ -37,7 +37,7 @@
       "basalt",
       "chalk"
     ],
-    "uuid": "620f2467-c17e-4350-b337-df856e89a134",
+    "uuid": "620f2467-c17e-4350-b337-df856e89a134", 
     "watchapp": {
       "hiddenApp": false,
       "onlyShownOnCommunication": false,
@@ -45,5 +45,5 @@
     }
   },
   "private": true,
-  "version": "5.3.0"
+  "version": "5.5.0"
 }

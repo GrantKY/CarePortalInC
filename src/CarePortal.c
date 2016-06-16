@@ -91,6 +91,7 @@ int fractionalpart_insulin = 0;
 int icarbs = 0;
 int percentage = 0;
 int tempTarget = 80;
+int tempTargetBase = 80;
 
 // Temp Basal
 int iBasalindex = 0; //0 - percentage, 1 - hrs 2- mins
@@ -289,9 +290,16 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         }
         break;
 		case INSULIN_INCREMENT:
-         {
-           APP_LOG(APP_LOG_LEVEL_INFO, "INSULIN_INCREMENT: %d", new_tuple->value->int8);
-		       insulin_increment = new_tuple->value->int32;
+        {
+        	APP_LOG(APP_LOG_LEVEL_INFO, "INSULIN_INCREMENT: %d", new_tuple->value->int8);
+			insulin_increment = new_tuple->value->int32;
+        }
+        break;
+        
+        case TEMPTARGET:
+        {
+        	APP_LOG(APP_LOG_LEVEL_INFO, "TEMPTARGET: %d", new_tuple->value->int8);
+			tempTargetBase = new_tuple->value->int32;        	
         }
         break;
     }
@@ -436,7 +444,8 @@ void ResetToDefaults()
   iBasalindex = 0;
   
   iTargetindex = 0;
-  
+  tempTarget = tempTargetBase;
+ 
   // reset memory allocation and initialise back to zero length
   memset(duration, 0, sizeof(duration));
   memset(percent, 0, sizeof(percent));
@@ -836,6 +845,8 @@ static void click_config_provider_carbs(void *context) {
   window_single_repeating_click_subscribe(BUTTON_ID_UP, 30, up_click_handler_carbs);
   window_single_repeating_click_subscribe(BUTTON_ID_DOWN, 30, down_click_handler_carbs);
 }
+
+
 
 void carbs_load_graph(Window *window) {
   
@@ -1406,7 +1417,6 @@ void exercise_load_graph(Window *window) {
     window_set_click_config_provider(window,(ClickConfigProvider)click_config_provider_exercise);
 
 }
-
 
 //////// CGM SENSOR ////////////////////////////////////////////////////////////////
 // returns the string of the new site location selection
