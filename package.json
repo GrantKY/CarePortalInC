@@ -1,16 +1,26 @@
 {
-  "author": "Dexterity",
-  "dependencies": {},
-  "keywords": [
-    "pebble-app"
-  ],
   "name": "OAPS Care Portal",
+  "author": "Foo",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
   "pebble": {
-    "capabilities": [
+	  "capabilities": [
       "configurable"
     ],
-    "displayName": "Care Portal",
+    "displayName": "OAPS Care Portal",
+    "uuid": "ff20cab9-003e-4f7e-a261-a7877050df14",
+    "sdkVersion": "3",
     "enableMultiJS": false,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
     "messageKeys": {
       "BG_UNITS": 14,
       "DURATION": 11,
@@ -27,23 +37,8 @@
       "SUCCESS": 10,
       "TEMPTARGET": 21
     },
-    "projectType": "native",
     "resources": {
       "media": []
-    },
-    "sdkVersion": "3",
-    "targetPlatforms": [
-      "aplite",
-      "basalt",
-      "chalk"
-    ],
-    "uuid": "620f2467-c17e-4350-b337-df856e89a134", 
-    "watchapp": {
-      "hiddenApp": false,
-      "onlyShownOnCommunication": false,
-      "watchface": false
     }
-  },
-  "private": true,
-  "version": "5.5.0"
+  }
 }
