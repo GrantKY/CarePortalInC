@@ -1,7 +1,7 @@
 {
   "name": "OAPS Care Portal",
-  "author": "Foo",
-  "version": "1.0.0",
+  "author": "Dexterity / Sulka Haro",
+  "version": "1.0.1",
   "keywords": ["pebble-app"],
   "private": true,
   "dependencies": {},
