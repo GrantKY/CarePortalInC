@@ -3,7 +3,7 @@
 // adding configuration screen for the units, secret key, web URL and Pebble name
 Pebble.addEventListener("showConfiguration", function(e) {
                         console.log("Showing Configuration", JSON.stringify(e));
-  Pebble.openURL('http://cgminthecloud.github.io/PebbleCareportal/config_2.html');
+  Pebble.openURL('http://sulkaharo.github.io/pebble_carelink_config.html');
                         });
 
 Pebble.addEventListener("webviewclosed", function(e) {
@@ -11,7 +11,7 @@ Pebble.addEventListener("webviewclosed", function(e) {
                         console.log("CLOSE CONFIG OPTIONS = " + JSON.stringify(opts));
                         // store configuration in local storage
                         localStorage.setItem('portalPebble', JSON.stringify(opts));    
-                        var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units},
+                        var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, TEMPTARGET: opts.temptarget},
                                             function(e) {
                                                          console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
                                                          },
@@ -26,7 +26,7 @@ Pebble.addEventListener('ready',
     console.log('JavaScript app ready and running!');
     var opts = [ ].slice.call(arguments).pop( );
     opts = JSON.parse(localStorage.getItem('portalPebble'));  
-    var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units},
+    var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, TEMPTARGET: opts.temptarget},
           function(e) {
                         console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
                       },
@@ -140,11 +140,18 @@ function MongoDBContents(e, enteredBy, units)
     var insulin = e.payload.INSULIN;
     var splitnow = e.payload.SPLITNOW;
     var splitext = e.payload.SPLITEXT;
+    var temptarget = e.payload.TEMPTARGET;
   
     var contents = {
       "enteredBy" : enteredBy,
       "eventType" : eventtype,
     };
+  
+  	if (temptarget !== undefined && temptarget !== null)
+  	{
+  		contents["targetTop"] = parseFloat(temptarget);
+  		contents["targetBottom"] = parseFloat(temptarget);
+  	}
   
     if (name !== undefined && name !== null)
     {

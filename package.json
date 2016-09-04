@@ -1,0 +1,44 @@
+{
+  "name": "OAPS Care Portal",
+  "author": "Dexterity / Sulka Haro",
+  "version": "1.1.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+	  "capabilities": [
+      "configurable"
+    ],
+    "displayName": "OAPS Care Portal",
+    "uuid": "ff20cab9-003e-4f7e-a261-a7877050df14",
+    "sdkVersion": "3",
+    "enableMultiJS": false,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": {
+      "BG_UNITS": 14,
+      "DURATION": 11,
+      "ERROR": 9,
+      "GLUCOSE": 13,
+      "INSULIN": 15,
+      "KEY_DATA": 5,
+      "KEY_EVENTTYPE": 8,
+      "KEY_EVENT_TYPE": 7,
+      "KEY_VALUE": 6,
+      "PERCENT": 12,
+      "SPLITEXT": 17,
+      "SPLITNOW": 16,
+      "SUCCESS": 10,
+      "TEMPTARGET": 21
+    },
+    "resources": {
+      "media": []
+    }
+  }
+}
