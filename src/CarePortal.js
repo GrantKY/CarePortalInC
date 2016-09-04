@@ -3,7 +3,7 @@
 // adding configuration screen for the units, secret key, web URL and Pebble name
 Pebble.addEventListener("showConfiguration", function(e) {
                         console.log("Showing Configuration", JSON.stringify(e));
-  Pebble.openURL('http://cgminthecloud.github.io/PebbleCareportal/config_2.html');
+  Pebble.openURL('http://cgminthecloud.github.io/PebbleCareportal/config_4.html');
                         });
 
 Pebble.addEventListener("webviewclosed", function(e) {
@@ -48,8 +48,13 @@ Pebble.addEventListener('appmessage',
 
     var opts = [ ].slice.call(arguments).pop( );
     opts = JSON.parse(localStorage.getItem('portalPebble'));
+            opts.endpoint = opts.endpoint.replace("/api/v1/treatments/", "");
+            opts.endpoint = opts.endpoint.replace("/api/v1/treatments", "");
+            opts.endpoint = opts.endpoint.replace("/pebble", "");
+
 
     console.log(opts);
+
 	  // check if endpoint exists
     if (!opts.endpoint) {
         // endpoint doesn't exist, return no endpoint to watch
@@ -174,8 +179,10 @@ function MongoDBContents(e, enteredBy, units)
 }
 
 
+
 function PostTreatment(contents, endpoint, hashAPI) {
-    var weburl = endpoint;
+    var weburl = endpoint + "/api/v1/treatments/";
+    console.log (weburl);
     var secret_key = hashAPI;
 
     console.log('Posting Treatment log');
@@ -201,7 +208,7 @@ function PostTreatment(contents, endpoint, hashAPI) {
         {
           console.log("SUCCESS --------------------");
             Pebble.sendAppMessage({ SUCCESS: "Message send successfully to website."});
-
+          
         }
     };
   
