@@ -1,17 +1,26 @@
 // Removed the auto codes and replace with configuration screen  below
+var insulin_increment = "5";
+var pebbleStorage = "portalPebbleCarePortal";
 
 // adding configuration screen for the units, secret key, web URL and Pebble name
 Pebble.addEventListener("showConfiguration", function(e) {
                         console.log("Showing Configuration", JSON.stringify(e));
-  Pebble.openURL('http://cgminthecloud.github.io/PebbleCareportal/config_4.html');
+//  Pebble.openURL('http://cgminthecloud.github.io/PebbleCareportal/config_1.html');
+   Pebble.openURL('http://cgminthecloud.github.io/PebbleCareportal/config_4.html');
                         });
 
 Pebble.addEventListener("webviewclosed", function(e) {
                         var opts = JSON.parse(decodeURIComponent(e.response));
                         console.log("CLOSE CONFIG OPTIONS = " + JSON.stringify(opts));
-                        // store configuration in local storage
-                        localStorage.setItem('portalPebble', JSON.stringify(opts));    
-                        var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units},
+                        opts = formatEndPoint(opts);
+  
+                      // store configuration in local storage
+                        localStorage.setItem(pebbleStorage, JSON.stringify(opts));  
+  
+                        if(opts.insulinincrement === undefined)
+                              opts.insulinincrement = insulin_increment;
+  
+                        var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, INSULIN_INCREMENT: parseInt(opts.insulinincrement)},
                                             function(e) {
                                                          console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
                                                          },
@@ -25,8 +34,13 @@ Pebble.addEventListener('ready',
   function(e) {
     console.log('JavaScript app ready and running!');
     var opts = [ ].slice.call(arguments).pop( );
-    opts = JSON.parse(localStorage.getItem('portalPebble'));  
-    var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units},
+    console.log("End point: " + opts.endpoint);
+    
+    if(opts.insulinincrement === undefined)
+            opts.insulinincrement = insulin_increment;
+
+    
+    var transactionid = Pebble.sendAppMessage({ BG_UNITS: opts.units, INSULIN_INCREMENT: parseInt(opts.insulinincrement)},
           function(e) {
                         console.log('Successfully delivered message with transactionId='+ e.data.transactionId);
                       },
@@ -47,14 +61,9 @@ Pebble.addEventListener('appmessage',
     //get options from configuration window
 
     var opts = [ ].slice.call(arguments).pop( );
-    opts = JSON.parse(localStorage.getItem('portalPebble'));
-            opts.endpoint = opts.endpoint.replace("/api/v1/treatments/", "");
-            opts.endpoint = opts.endpoint.replace("/api/v1/treatments", "");
-            opts.endpoint = opts.endpoint.replace("/pebble", "");
-
-
+    opts = JSON.parse(localStorage.getItem(pebbleStorage));
+    opts = formatEndPoint(opts);
     console.log(opts);
-
 	  // check if endpoint exists
     if (!opts.endpoint) {
         // endpoint doesn't exist, return no endpoint to watch
@@ -71,8 +80,11 @@ Pebble.addEventListener('appmessage',
         Pebble.sendAppMessage(JSON.stringify(message));
         return;   
     }
-    
-    var contents = MongoDBContents(e, opts.pebblename, opts.units);
+    var contents ={
+      dummy: ""
+    };
+    contents = MongoDBContents(e, contents, opts.pebblename, opts.units);
+ //   var contents = MongoDBContents(e, opts.pebblename, opts.units);
     PostTreatment(contents, opts.endpoint, opts.hashAPI);
   }
 );
@@ -104,7 +116,7 @@ function AddBGData(contents, currentglucose, bg_units)
   return contents;  
 }
 
-function AddComboBolous(contents, enteredinsulin, splitnow, splitext)
+function AddComboBolus(contents, enteredinsulin, splitnow, splitext)
 {
   
   if(isNumber(enteredinsulin))
@@ -134,7 +146,7 @@ function isNumber(obj)
 }
 
 //https://ninedof.wordpress.com/2014/02/02/pebble-sdk-2-0-tutorial-6-appmessage-for-pebblekit-js/
-function MongoDBContents(e, enteredBy, units)
+function MongoDBContents(e, contents, enteredBy, units)
 {
     var name = e.payload.KEY_DATA; 
     var result =  e.payload.KEY_VALUE;
@@ -145,8 +157,10 @@ function MongoDBContents(e, enteredBy, units)
     var insulin = e.payload.INSULIN;
     var splitnow = e.payload.SPLITNOW;
     var splitext = e.payload.SPLITEXT;
+    var profile = e.payload.PROFILE;
+	  
   
-    var contents = {
+     contents = {
       "enteredBy" : enteredBy,
       "eventType" : eventtype,
     };
@@ -156,7 +170,7 @@ function MongoDBContents(e, enteredBy, units)
         contents[name.toLowerCase()] = result;
     }  
 
-//  Add Temp Basal Info
+   //  Add Temp Basal Info
     if (duration !== undefined && duration !== null)
     {
       contents = AddTempBasalDetails(contents, duration, percent);
@@ -169,20 +183,32 @@ function MongoDBContents(e, enteredBy, units)
     }
     
   // Combo Bolus
-  
     if(splitnow !== undefined && splitnow !== null)
     {
-         contents = AddComboBolous(contents, insulin, splitnow, splitext);
+         contents = AddComboBolus(contents, insulin, splitnow, splitext);
     }
+    
+    // Insulin
+    if(insulin !==undefined && insulin !== null)
+      {
+        if(contents.insulin === undefined)
+        {
+          contents.insulin = insulin;
+        }
+      }
   
+    // Profile Switch
+	if(profile !== undefined && profile !== null)
+    {
+         contents.profile = profile;
+    }
     return contents;
 }
 
 
-
 function PostTreatment(contents, endpoint, hashAPI) {
-    var weburl = endpoint + "/api/v1/treatments/";
-    console.log (weburl);
+    var weburl = endpoint + '/api/v1/treatments/';
+  
     var secret_key = hashAPI;
 
     console.log('Posting Treatment log');
@@ -208,9 +234,16 @@ function PostTreatment(contents, endpoint, hashAPI) {
         {
           console.log("SUCCESS --------------------");
             Pebble.sendAppMessage({ SUCCESS: "Message send successfully to website."});
-          
+
         }
     };
   
     http.send(JSON.stringify(contents));
   }
+function formatEndPoint(opts)
+{
+    opts.endpoint = opts.endpoint.replace("/api/v1/treatments/", "");
+    opts.endpoint = opts.endpoint.replace("/api/v1/treatments", "");
+    opts.endpoint = opts.endpoint.replace("/pebble", "");
+    return opts;
+}
