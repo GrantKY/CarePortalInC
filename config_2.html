@@ -138,8 +138,8 @@
 					opts = (_raw && _raw.length && _raw.length > 5 ? JSON.parse(_raw) : { });
 					$("#endpoint").val(opts && opts.endpoint ? opts.endpoint : '');
 					$("#pebblename").val(opts && opts.pebblename ? opts.pebblename : '');
-					$("input[value='mmol']").attr("checked",false).checkboxradio("refresh");
-					$("input[value='mgdl']").attr("checked",true).checkboxradio("refresh");
+					$("input[value='mgdl']").attr("checked",false).checkboxradio("refresh");
+					$("input[value='mmol']").attr("checked",true).checkboxradio("refresh");
 					$("#secretAPI").val(opts && opts.secretAPI ? opts.secretAPI : '');
 					$("#hashAPI").val(opts && opts.hashAPI ? opts.hashAPI : '');
 					$("#insulinincrement").val('5').selectmenu("refresh");									
