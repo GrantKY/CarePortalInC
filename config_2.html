@@ -35,7 +35,7 @@
 			<div data-role="fieldcontain">
 				<fieldset data-role="controlgroup" id="Radio_Options" data-type="horizontal" >
 					<legend><strong>Choose mg/dl or mmol:</strong></legend>
-					<input name="radio_units" type="radio" id="mgdl_form" onchange="onchange_handler(this, 'mgdl');" onmouseup="onchange_handler(this, 'mgdl');" value="mgdl"/>
+					<input name="radio_units" type="radio" id="mgdl_form"  value="mgdl" onchange="onchange_handler(this, 'mgdl');" onmouseup="onchange_handler(this, 'mgdl');" value="mgdl"/>
 					<label for="mgdl_form">mg/dl</label>
 					<input type="radio" name="radio_units" id="mmol_form" value="mmol" onchange="onchange_handler(this, 'mmol');" onmouseup="onchange_handler(this, 'mmol');">
 					<label for="mmol_form">mmol</label>
@@ -56,7 +56,7 @@
                 autocorrect="off"/>
 			</div>
 			<div>
-				ie: https://name.azurewebsites.net/api/v1/treatments/
+				ie: https://name.azurewebsites.net/
 			</div>
 				  
 			<div data-role="fieldcontain">
@@ -163,7 +163,7 @@
 						$("#secretAPI").val(opts && opts.secretAPI ? opts.secretAPI : '');
 						$("#hashAPI").val(opts && opts.hashAPI ? opts.hashAPI : '');
 						$("#insulinincrement").val(opts.insulinincrement).selectmenu("refresh");
-						if (opts.units == 'mgdl_form'){
+						if (opts.units == 'mgdl'){
 							$("input[value='" + opts.units + "']").attr("checked",true).checkboxradio("refresh");
 							document.getElementById('mgdl_form').style.display = 'block';
 							document.getElementById('mmol_form').style.display = 'none';
