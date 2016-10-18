@@ -145,7 +145,6 @@ int insulinchangeindex = 0;
 int carbs_insulin_index = 0; // 0 - carbs, 1 - insulin integer part, 2 - insulin fractional part
 
 
-
 void Set_Carbs(int *current, int increment)
 {
 	*current += increment;
@@ -656,7 +655,7 @@ static void select_click_handler_carbs_insulin(ClickRecognizerRef recognizer, vo
 	      snprintf(resultvalue, sizeof(resultvalue), "%d", icarbs);
 		    snprintf(insulin, sizeof(insulin), "%d.%s", integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
         //snprintf(resultvalue, sizeof(resultvalue), "Carbs: %d g\nInsulin: %d.%s units", icarbs, integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
-        snprintf(eventtype,sizeof(eventtype), "Note");
+        snprintf(eventtype,sizeof(eventtype), "<none>");
         create_populate_window();
         carbs_insulin_index = 0;
       
@@ -664,7 +663,7 @@ static void select_click_handler_carbs_insulin(ClickRecognizerRef recognizer, vo
       snprintf(outputtext, sizeof(outputtext), "You are adding 'Carbs: %d g'  to Care Portal.", icarbs);
   snprintf(keyname, sizeof(keyname), "carbs");
   snprintf(resultvalue, sizeof(resultvalue), "%d", icarbs);
-  snprintf(eventtype,sizeof(eventtype), "Note");
+  snprintf(eventtype,sizeof(eventtype), "<none>");
   */
       
     }
@@ -762,7 +761,7 @@ static void select_click_handler_insulin(ClickRecognizerRef recognizer, void *co
 
         snprintf(keyname, sizeof(keyname), "insulin");
         snprintf(resultvalue, sizeof(resultvalue), "%d.%s", integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin));
-        snprintf(eventtype,sizeof(eventtype), "Note");
+        snprintf(eventtype,sizeof(eventtype), "<none>");
         create_populate_window();
         bIntegerPart_set = false;
     }
@@ -838,7 +837,7 @@ static void select_click_handler_carbs(ClickRecognizerRef recognizer, void *cont
   snprintf(outputtext, sizeof(outputtext), "You are adding 'Carbs: %d g'  to Care Portal.", icarbs);
   snprintf(keyname, sizeof(keyname), "carbs");
   snprintf(resultvalue, sizeof(resultvalue), "%d", icarbs);
-  snprintf(eventtype,sizeof(eventtype), "Note");
+  snprintf(eventtype,sizeof(eventtype), "<none>");
 
   create_populate_window();
 }
@@ -908,7 +907,7 @@ static void select_click_handler_pumpsitechange(ClickRecognizerRef recognizer, v
     char * sitechange = GetPumpSiteChangeLocation(INITIAL);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_pumpsitechange - Pump Site Location: %s", sitechange);
     snprintf(outputtext, sizeof(outputtext), "You are adding 'Pump Site Location: %s'  to Care Portal.", sitechange);
-    snprintf(keyname, sizeof(keyname), "notes");
+    snprintf(keyname, sizeof(keyname), "<none>");
     snprintf(resultvalue, sizeof(resultvalue), "%s", sitechange);
     snprintf(eventtype,sizeof(eventtype), "Site Change");
   
@@ -1006,7 +1005,7 @@ static void select_click_handler_TempBasal(ClickRecognizerRef recognizer, void *
   else
   {
       snprintf(outputtext, sizeof(outputtext), "You are adding 'TempBasal' %+d%% over %d hrs %d mins to Care Portal.", percentage, hrs, minutes);
-      snprintf(keyname, sizeof(keyname), "notes");
+      snprintf(keyname, sizeof(keyname), "<none>");
       snprintf(resultvalue, sizeof(resultvalue), "Temp Basal %+d%% over %d hrs %d mins.", percentage, hrs, minutes);
       snprintf(eventtype,sizeof(eventtype), "Temp Basal");
       snprintf(duration,sizeof(duration), "%d",(hrs * 60) + minutes );
@@ -1223,7 +1222,7 @@ static void select_click_handler_combobolus(ClickRecognizerRef recognizer, void 
         snprintf(outputtext, sizeof(outputtext), "You are adding Insulin: %d.%s units.\nCombo bolus\n %d%%/%d%%\n over\n %d hrs %d minutes",
             integerpart_insulin, GetFractionaPartAsChar(fractionalpart_insulin), combo_bolus_combo_per, precentagedifference, hrs, minutes );
 
-        snprintf(keyname, sizeof(keyname), "notes");
+        snprintf(keyname, sizeof(keyname), "<none>");
         snprintf(resultvalue, sizeof(resultvalue),  "COMBO BOLUS");
         snprintf(eventtype,sizeof(eventtype), "Combo Bolus");
         snprintf(duration,sizeof(duration), "%d",(hrs * 60) + minutes );
@@ -1323,7 +1322,7 @@ static void select_click_handler_exercise(ClickRecognizerRef recognizer, void *c
 		app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_exercise");
 		snprintf(outputtext, sizeof(outputtext), "You are adding Exercise:%d hrs\n%d minutes", hrs, minutes );
 
-		snprintf(keyname, sizeof(keyname), "notes");
+		snprintf(keyname, sizeof(keyname), "<none>");
 		snprintf(resultvalue, sizeof(resultvalue),  "Exercise Added");
 		snprintf(eventtype,sizeof(eventtype), "Exercise");
 		snprintf(duration,sizeof(duration), "%d",(hrs * 60) + minutes );
@@ -1419,7 +1418,7 @@ static void select_click_handler_cgmsensor(ClickRecognizerRef recognizer, void *
     char * cgmchange = GetCGMSensorOption(INITIAL);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_cgmsensor - CGM Sensor: %s", cgmchange);
     snprintf(outputtext, sizeof(outputtext), "You are adding '%s'  to Care Portal.", cgmchange);
-    snprintf(keyname, sizeof(keyname), "notes");
+    snprintf(keyname, sizeof(keyname), "<none>");
     snprintf(resultvalue, sizeof(resultvalue), "CGM Sensor: %s", cgmchange);
     snprintf(eventtype,sizeof(eventtype), "%s", cgmchange);
   
@@ -1512,7 +1511,7 @@ static void select_click_handler_insulinchange(ClickRecognizerRef recognizer, vo
     char * insulinchange = GetInsulinChange(INITIAL);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_insulinchange - Insulin Option: %s", insulinchange);
     snprintf(outputtext, sizeof(outputtext), "You are adding \n '%s'  to Care Portal.", insulinchange);
-    snprintf(keyname, sizeof(keyname), "notes");
+    snprintf(keyname, sizeof(keyname), "<none>");
     snprintf(resultvalue, sizeof(resultvalue), "Insulin Option: %s", insulinchange);
     snprintf(eventtype,sizeof(eventtype), "Insulin Change");
   
@@ -1604,7 +1603,7 @@ static void select_click_handler_profileswitch(ClickRecognizerRef recognizer, vo
     char * profileswitch = GetProfileSwitch(INITIAL);
     app_log(APP_LOG_LEVEL_DEBUG, "main.c", 0, "select_click_handler_profileswitch - Profile Switch: %s", profileswitch);
     snprintf(outputtext, sizeof(outputtext), "You are adding Profile Switch:\n '%s'  to Care Portal.", profileswitch);
-    snprintf(keyname, sizeof(keyname), "notes");
+    snprintf(keyname, sizeof(keyname), "<none>");
     snprintf(resultvalue, sizeof(resultvalue), "Profile Switch: %s", profileswitch);
     snprintf(eventtype,sizeof(eventtype), "Profile Switch");
     snprintf(profile,sizeof(profile), "%s", profileswitch);
